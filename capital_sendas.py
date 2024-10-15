@@ -78,10 +78,42 @@ dfCapital_sendas = pd.merge(dfCapital_sendas, dfAnexos[['CUPS', 'TIPOLOGIA']].dr
 # Agregar columna 'ips' de dfBases a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS' y seleccionando solo la primera aparición
 dfCapital_sendas = pd.merge(dfCapital_sendas, dfBases.drop_duplicates(subset='documento', keep='first'), left_on=['PacienteNit'], right_on=['documento'], how='left').drop(columns=['documento'])
 
-# Agregar PacienteNit de dfCapital_sendas a dfComprobar
-
 # Agregar columna 'PacienteNit' de dfCapital_sendas a dfComprobar cuando no tiene 'ips'
-dfComprobar = dfCapital_sendas[dfCapital_sendas['ips'].isna()][['PacienteNit']].drop_duplicates()
+dfComprobar = dfCapital_sendas[dfCapital_sendas['ips'].isna()][['PacienteNit', 'UsuarioNombre']].drop_duplicates()
+
+# Funcion para separar nombres y apellidos
+def separar_nombres(nombre_completo):
+    # Separa los nombres en partes
+    partes_ini = nombre_completo.split()
+    partes = []
+    parte = ''
+
+    # Unifica los nombres compuestos
+    for nombre in partes_ini:
+        if nombre in ['DE', 'DEL', 'LA', 'LOS']:
+            parte = parte + nombre + ' '
+        else:
+            parte = parte + nombre
+            partes.append(parte)
+            parte = ''
+    
+    # Decide las posiciones de los nombres
+    if len(partes) == 4:
+        return partes[0], partes[1], partes[2], partes[3]
+    elif len(partes) > 4:
+        return partes[0], ' '.join(partes[1:-2]), partes[-2], partes[-1]  # Ultimos 2 como apellidos, el resto como apellidos
+    elif len(partes) == 3:
+        return partes[0], '', partes[1], partes[2]  # Si falta un nombre
+    elif len(partes) == 2:
+        return partes[0], '', partes[1], ''  # Solo un nombre y un apellido
+    else:
+        return partes[0], '', '', ''  # Caso de un solo nombre
+
+# Aplicar la función
+dfComprobar[['nombre1', 'nombre2', 'apellido1', 'apellido2']] = dfComprobar['UsuarioNombre'].apply(separar_nombres).apply(pd.Series)
+
+# Eliminar la columna 'UsuarioNombre'
+dfComprobar = dfComprobar.drop(columns=['UsuarioNombre'])
 
 # %% Descargar los archivos
 print('Descargando archivos')
@@ -98,3 +130,5 @@ dfCapital_sendas['FechaEgreso_'] = dfCapital_sendas['FechaEgreso_'].dt.strftime(
 print('-capital_sendas.xlsx')
 con.execute("COPY (SELECT * FROM dfCapital_sendas) TO 'capital_sendas.xlsx' WITH (FORMAT GDAL, DRIVER 'xlsx');")
 con.execute("COPY (SELECT * FROM dfComprobar) TO 'comprobar.csv' WITH (HEADER, DELIMITER ',');")
+
+# %%
