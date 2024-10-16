@@ -24,6 +24,12 @@ url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKgHVUjz81og_o-HBHr8VgVx
 data = requests.get(url).content
 dfAnexos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
 
+# Cargar Codigo tipologia de Google Sheet
+print('-Tipologia')
+url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgWJpqVC3pnUN3NJwG5LAfvSY1BvW6SI7lZISuwj1ESiv4RFysur0CNY5aU2o0EgYK4BzVyYaGeyiW/pub?gid=0&single=true&output=csv"
+data = requests.get(url).content
+dfTipologia = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+
 # Conectar a DuckDB y cargar los xlsx a df
 con = duckdb.connect()
 con.sql("INSTALL spatial; LOAD spatial;")
@@ -68,10 +74,15 @@ dfCapital_sendas = pd.merge(dfCapital_sendas, dfCodigos[['SERVICIO', 'CONCEPTO',
 dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
 dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
 
+# Agregar columna de dfTipologia a dfCapital_sendas
+
+# Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas cruzando con 'SERVICIO'
+dfCapital_sendas = pd.merge(dfCapital_sendas, dfTipologia[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'), on=['SERVICIO'], how='left')
+
 # Agregar columnas de dfAnexos a dfCapital_sendas
 
 # Agregar columna 'TIPOLOGIA' de dfAnexos a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS' y seleccionando solo la primera aparición
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfAnexos[['CUPS', 'TIPOLOGIA']].drop_duplicates(subset='CUPS', keep='first'), left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
+dfCapital_sendas = pd.merge(dfCapital_sendas, dfAnexos[['CUPS', 'TIPOLOGIA NOMBRE']].drop_duplicates(subset='CUPS', keep='first'), left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
 
 # Agregar columnas de dfBases a dfCapital_sendas
 
@@ -109,11 +120,15 @@ def separar_nombres(nombre_completo):
     else:
         return partes[0], '', '', ''  # Caso de un solo nombre
 
-# Aplicar la función
+# Aplicar la función para separar nombres y apellidos
 dfComprobar[['nombre1', 'nombre2', 'apellido1', 'apellido2']] = dfComprobar['UsuarioNombre'].apply(separar_nombres).apply(pd.Series)
 
 # Eliminar la columna 'UsuarioNombre'
 dfComprobar = dfComprobar.drop(columns=['UsuarioNombre'])
+
+# %% Reglas
+
+# 
 
 # %% Descargar los archivos
 print('Descargando archivos')
