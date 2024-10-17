@@ -128,7 +128,54 @@ dfComprobar = dfComprobar.drop(columns=['UsuarioNombre'])
 
 # %% Reglas
 
-# 
+# Crear columna 'validacion' con valor 0
+dfCapital_sendas['validacion'] = 0
+
+# Quirófano ‘Qxx’
+
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfQuirofano
+dfQuirofano = dfCapital_sendas[dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][['NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
+
+# Ordenar dfQuirofano por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
+dfQuirofano = dfQuirofano.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
+
+# Agrupar por 'NumeroFactura' y 'FechaServicio'
+def aplicar_validacion(grupo):
+    # Si hay 3 o menos registros, colocar 'validacion' igual a 1 en todos
+    if len(grupo) <= 3:
+        grupo['validacion'] = 1
+    else:
+        # Si hay más de 3 registros
+
+        # Inicializa contadores
+        actualizados = 0
+        actualizados_grupo = 0
+        grupo_qx = ''
+        # Valida cada registro
+        for indice, fila in grupo.iterrows():
+            # Valida que no se asignen más de 3 registros
+            if actualizados < 3:
+                # Valida que se sigue en el mismo 'GRUPO QX'
+                if fila['GRUPO QX'] == grupo_qx:
+                    # Valida que no se asignen más de 2 registros por 'GRUPO QX'
+                    if actualizados_grupo < 2:
+                        grupo.at[indice, 'validacion'] = 1
+                        actualizados += 1
+                        actualizados_grupo += 1
+                else:
+                    # Por ser un nuevo grupo se asiga validación y se actualizan contadores
+                    grupo.at[indice, 'validacion'] = 1
+                    actualizados += 1
+                    actualizados_grupo = 1
+                    grupo_qx = fila['GRUPO QX']
+                    
+    return grupo
+
+# Aplicar la función de validación a cada grupo
+dfQuirofano = dfQuirofano.groupby(['NumeroFactura', 'FechaServicio']).apply(aplicar_validacion).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfQuirofano
+dfCapital_sendas.update(dfQuirofano[['validacion']])
 
 # %% Descargar los archivos
 print('Descargando archivos')
