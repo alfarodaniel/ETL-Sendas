@@ -133,11 +133,14 @@ dfCapital_sendas['validacion'] = 0
 
 # Quirófano ‘Qxx’
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfQuirofano
-dfQuirofano = dfCapital_sendas[dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][['NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
+dfTemporal = dfCapital_sendas[dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][['NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
 
-# Ordenar dfQuirofano por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
-dfQuirofano = dfQuirofano.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
+# De 'FechaServicio' extraer solo la fecha sin la hora
+dfTemporal['FechaServicio'] = dfTemporal['FechaServicio'].dt.date
+
+# Ordenar dfTemporal por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
+dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
 
 # Agrupar por 'NumeroFactura' y 'FechaServicio'
 def aplicar_validacion(grupo):
@@ -145,8 +148,7 @@ def aplicar_validacion(grupo):
     if len(grupo) <= 3:
         grupo['validacion'] = 1
     else:
-        # Si hay más de 3 registros
-
+        # Si hay más de 3 registros        
         # Inicializa contadores
         actualizados = 0
         actualizados_grupo = 0
@@ -167,15 +169,14 @@ def aplicar_validacion(grupo):
                     grupo.at[indice, 'validacion'] = 1
                     actualizados += 1
                     actualizados_grupo = 1
-                    grupo_qx = fila['GRUPO QX']
-                    
+                    grupo_qx = fila['GRUPO QX']                
     return grupo
 
 # Aplicar la función de validación a cada grupo
-dfQuirofano = dfQuirofano.groupby(['NumeroFactura', 'FechaServicio']).apply(aplicar_validacion).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
+dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(aplicar_validacion).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
 
-# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfQuirofano
-dfCapital_sendas.update(dfQuirofano[['validacion']])
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
+dfCapital_sendas.update(dfTemporal[['validacion']])
 
 # %% Descargar los archivos
 print('Descargando archivos')
