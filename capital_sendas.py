@@ -142,8 +142,10 @@ dfTemporal['FechaServicio'] = dfTemporal['FechaServicio'].dt.date
 # Ordenar dfTemporal por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
 dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
 
-# Agrupar por 'NumeroFactura' y 'FechaServicio'
-def aplicar_validacion(grupo):
+# Función dfTemporal
+#  ≤ 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1
+#  > 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
+def validacion_Qx(grupo):
     # Si hay 3 o menos registros, colocar 'validacion' igual a 1 en todos
     if len(grupo) <= 3:
         grupo['validacion'] = 1
@@ -172,8 +174,8 @@ def aplicar_validacion(grupo):
                     grupo_qx = fila['GRUPO QX']                
     return grupo
 
-# Aplicar la función de validación a cada grupo
-dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(aplicar_validacion).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
+# Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
+dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
