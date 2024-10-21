@@ -61,7 +61,6 @@ dfCapital_sendas['FECHA_NACIMIENTO'] = dfCapital_sendas['PacienteFechaNac']
 dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FechaServicio']
 dfCapital_sendas['SERVICIO'] = dfCapital_sendas['ServicioCodigo']
 dfCapital_sendas['NOMBRE_SERVICIO'] = dfCapital_sendas['ServicioNombre']
-dfCapital_sendas['NOMBRE_SERVICIO'] = dfCapital_sendas['ServicioNombre']
 
 # Agregar columnas de dfCodigos a dfCapital_sendas
 
