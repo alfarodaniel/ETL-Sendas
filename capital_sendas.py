@@ -141,7 +141,7 @@ dfTemporal['FechaServicio'] = dfTemporal['FechaServicio'].dt.date
 # Ordenar dfTemporal por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
 dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
 
-# Función dfTemporal
+# Función validacion_Qx
 #  ≤ 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1
 #  > 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
 def validacion_Qx(grupo):
@@ -175,6 +175,20 @@ def validacion_Qx(grupo):
 
 # Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
 dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
+dfCapital_sendas.update(dfTemporal[['validacion']])
+
+# %% Egresos
+
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
+dfTemporal = dfCapital_sendas[dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][['NumeroFactura', 'CONCEPTO', 'validacion']]
+
+# Eliminar duplicados de 'NumeroFactura' y 'CONCEPTO'
+dfTemporal = dfTemporal.drop_duplicates(subset=['NumeroFactura', 'CONCEPTO'], keep='first')
+
+# Actualizar 'validacion' a 1
+dfTemporal['validacion'] = 1
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
