@@ -10,25 +10,55 @@ import pandas as pd
 import requests
 import io
 import duckdb
+import os
 
 print('Cargando archivos')
 # Cargar Codigos consultas de Google Sheet
+
+# Función descargaExcel para descargar los excel compartidos en OneDrive 365
+def descargaExcel(url):
+    # Reemplazar la parte después del ? con download=1
+    url = url.split('?')[0] + '?download=1'
+
+    # Descargar el Excel
+    data = requests.get(url)
+
+    # Verificar si la descarga fue exitosa
+    if data.status_code == 200:
+        # Guardar el contenido en un archivo temporal
+        with open("temp.xlsx", "wb") as file:
+            file.write(data.content)
+
+        # Leer el archivo temporal con pandas
+        df = pd.read_excel("temp.xlsx")
+
+        # Eliminar el archivo temporal (opcional)
+        os.remove("temp.xlsx")
+        return df
+    else:
+        print(f"Error al descargar el archivo: {data.status_code}")
+        return False
+
 print('-Códigos')
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTev0VnRGqk48QqiFXpkzYbHlgkiqdzcPLmbBclTAs8oHnWc_ldYB-5PB9wfv_RH5cmbYMLaxJHcXnc/pub?gid=376848632&single=true&output=csv"
-data = requests.get(url).content
-dfCodigos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTev0VnRGqk48QqiFXpkzYbHlgkiqdzcPLmbBclTAs8oHnWc_ldYB-5PB9wfv_RH5cmbYMLaxJHcXnc/pub?gid=376848632&single=true&output=csv"
+#data = requests.get(url).content
+#dfCodigos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcLsPJKWhwxIoljSAm24vB8BouYTCUF1__tXxPVwDn44aA?e=WNkZxt")
+
 
 # Cargar Anexos Capital Salud unificados 2023 de Google Sheet
 print('-Anexos')
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKgHVUjz81og_o-HBHr8VgVxiOyRQMpo36zoX_Ckpf31dQMR2ocCRFUyU0BBPqfPT5Wemrd-lQH7Qf/pub?gid=663714319&single=true&output=csv"
-data = requests.get(url).content
-dfAnexos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKgHVUjz81og_o-HBHr8VgVxiOyRQMpo36zoX_Ckpf31dQMR2ocCRFUyU0BBPqfPT5Wemrd-lQH7Qf/pub?gid=663714319&single=true&output=csv"
+#data = requests.get(url).content
+#dfAnexos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EdjY3dEvXXFHod9G_nNByAYBiNlxWKem41zHWM1y2vM3Cw")
 
 # Cargar Codigo tipologia de Google Sheet
 print('-Tipologia')
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgWJpqVC3pnUN3NJwG5LAfvSY1BvW6SI7lZISuwj1ESiv4RFysur0CNY5aU2o0EgYK4BzVyYaGeyiW/pub?gid=0&single=true&output=csv"
-data = requests.get(url).content
-dfTipologia = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgWJpqVC3pnUN3NJwG5LAfvSY1BvW6SI7lZISuwj1ESiv4RFysur0CNY5aU2o0EgYK4BzVyYaGeyiW/pub?gid=0&single=true&output=csv"
+#data = requests.get(url).content
+#dfTipologia = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
+dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
 # Conectar a DuckDB y cargar los xlsx a df
 con = duckdb.connect()
