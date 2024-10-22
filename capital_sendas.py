@@ -42,24 +42,14 @@ def descargaExcel(url):
         return False
 
 print('-Códigos')
-#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTev0VnRGqk48QqiFXpkzYbHlgkiqdzcPLmbBclTAs8oHnWc_ldYB-5PB9wfv_RH5cmbYMLaxJHcXnc/pub?gid=376848632&single=true&output=csv"
-#data = requests.get(url).content
-#dfCodigos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
 dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcLsPJKWhwxIoljSAm24vB8BouYTCUF1__tXxPVwDn44aA?e=WNkZxt")
-
 
 # Cargar Anexos Capital Salud unificados 2023 de Google Sheet
 print('-Anexos')
-#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKgHVUjz81og_o-HBHr8VgVxiOyRQMpo36zoX_Ckpf31dQMR2ocCRFUyU0BBPqfPT5Wemrd-lQH7Qf/pub?gid=663714319&single=true&output=csv"
-#data = requests.get(url).content
-#dfAnexos = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
 dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EdjY3dEvXXFHod9G_nNByAYBiNlxWKem41zHWM1y2vM3Cw")
 
 # Cargar Codigo tipologia de Google Sheet
 print('-Tipologia')
-#url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgWJpqVC3pnUN3NJwG5LAfvSY1BvW6SI7lZISuwj1ESiv4RFysur0CNY5aU2o0EgYK4BzVyYaGeyiW/pub?gid=0&single=true&output=csv"
-#data = requests.get(url).content
-#dfTipologia = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
 dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
 # Cargar Facturacion rips
