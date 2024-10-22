@@ -13,7 +13,9 @@ import duckdb
 import os
 
 print('Cargando archivos')
-# Cargar Codigos consultas de Google Sheet
+# Conectar a DuckDB y cargar los xlsx a df
+con = duckdb.connect()
+con.sql("INSTALL spatial; LOAD spatial;")
 
 # Función descargaExcel para descargar los excel compartidos en OneDrive 365
 def descargaExcel(url):
@@ -30,7 +32,7 @@ def descargaExcel(url):
             file.write(data.content)
 
         # Leer el archivo temporal con pandas
-        df = pd.read_excel("temp.xlsx")
+        df = con.query("SELECT * FROM st_read('temp.xlsx')").df()
 
         # Eliminar el archivo temporal (opcional)
         os.remove("temp.xlsx")
@@ -60,9 +62,6 @@ print('-Tipologia')
 #dfTipologia = pd.read_csv(io.StringIO(data.decode("utf-8")), dtype=str)
 dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
-# Conectar a DuckDB y cargar los xlsx a df
-con = duckdb.connect()
-con.sql("INSTALL spatial; LOAD spatial;")
 # Cargar Facturacion rips
 print('-facturacion_rips.xlsx')
 dfFacRips = con.query("SELECT * FROM st_read('facturacion_rips.xlsx')").df()
