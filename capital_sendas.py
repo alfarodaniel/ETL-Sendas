@@ -8,7 +8,6 @@
 # Cargar librerias
 import pandas as pd
 import requests
-import io
 import duckdb
 import os
 
