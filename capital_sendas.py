@@ -40,14 +40,15 @@ def descargaExcel(url):
         print(f"Error al descargar el archivo: {data.status_code}")
         return False
 
+# Cargar Codigos consultas de OneDrive
 print('-Códigos')
 dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcLsPJKWhwxIoljSAm24vB8BouYTCUF1__tXxPVwDn44aA?e=WNkZxt")
 
-# Cargar Anexos Capital Salud unificados 2023 de Google Sheet
+# Cargar Anexos Capital Salud unificados 2023 de de OneDrive
 print('-Anexos')
 dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EdjY3dEvXXFHod9G_nNByAYBiNlxWKem41zHWM1y2vM3Cw")
 
-# Cargar Codigo tipologia de Google Sheet
+# Cargar Codigo tipologia de de OneDrive
 print('-Tipologia')
 dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
