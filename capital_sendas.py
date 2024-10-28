@@ -164,32 +164,28 @@ dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO
 #  ≤ 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1
 #  > 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
 def validacion_Qx(grupo):
-    # Si hay 3 o menos registros, colocar 'validacion' igual a 1 en todos
-    if len(grupo) <= 3:
-        grupo['validacion'] = 1
-    else:
-        # Si hay más de 3 registros        
-        # Inicializa contadores
-        actualizados = 0
-        actualizados_grupo = 0
-        grupo_qx = ''
-        # Valida cada registro
-        for indice, fila in grupo.iterrows():
-            # Valida que no se asignen más de 3 registros
-            if actualizados < 3:
-                # Valida que se sigue en el mismo 'GRUPO QX'
-                if fila['GRUPO QX'] == grupo_qx:
-                    # Valida que no se asignen más de 2 registros por 'GRUPO QX'
-                    if actualizados_grupo < 2:
-                        grupo.at[indice, 'validacion'] = 1
-                        actualizados += 1
-                        actualizados_grupo += 1
-                else:
-                    # Por ser un nuevo grupo se asiga validación y se actualizan contadores
+    # Si hay más de 3 registros        
+    # Inicializa contadores
+    actualizados = 0
+    actualizados_grupo = 0
+    grupo_qx = ''
+    # Valida cada registro
+    for indice, fila in grupo.iterrows():
+        # Valida que no se asignen más de 3 registros
+        if actualizados < 3:
+            # Valida que se sigue en el mismo 'GRUPO QX'
+            if fila['GRUPO QX'] == grupo_qx:
+                # Valida que no se asignen más de 2 registros por 'GRUPO QX'
+                if actualizados_grupo < 2:
                     grupo.at[indice, 'validacion'] = 1
                     actualizados += 1
-                    actualizados_grupo = 1
-                    grupo_qx = fila['GRUPO QX']                
+                    actualizados_grupo += 1
+            else:
+                # Por ser un nuevo grupo se asiga validación y se actualizan contadores
+                grupo.at[indice, 'validacion'] = 1
+                actualizados += 1
+                actualizados_grupo = 1
+                grupo_qx = fila['GRUPO QX']                
     return grupo
 
 # Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
