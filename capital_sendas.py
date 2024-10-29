@@ -7,6 +7,7 @@
 
 # Cargar librerias
 import pandas as pd
+import numpy as np
 import requests
 import duckdb
 import os
@@ -99,8 +100,52 @@ dfCapital_sendas = pd.merge(dfCapital_sendas, dfTipologia[['SERVICIO', 'tipologi
 
 # Agregar columnas de dfAnexos a dfCapital_sendas
 
-# Agregar columna 'TIPOLOGIA' de dfAnexos a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS' y seleccionando solo la primera aparición
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfAnexos[['CUPS', 'TIPOLOGIA NOMBRE']].drop_duplicates(subset='CUPS', keep='first'), left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
+# Crea dfTemporal cruzando dfCapital_sendas y dfAnexos
+dfTemporal = pd.merge(dfCapital_sendas[['GENERO', 'EDAD', 'SERVICIO']].drop_duplicates(), dfAnexos[['CUPS', 'TIPOLOGIA NOMBRE']].drop_duplicates(), left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
+
+# Asegúrate de que no haya NaN en 'TIPOLOGIA NOMBRE'
+dfTemporal['TIPOLOGIA NOMBRE'] = dfTemporal['TIPOLOGIA NOMBRE'].fillna('')
+
+# Agregar la columna 'Contiene' con el valor 1 si 'TIPOLOGIA NOMBRE' contiene 'PEDIATRIA' o 'GINECOLOGIA', de lo contrario 1
+dfTemporal['Contiene'] = np.where(dfTemporal['TIPOLOGIA NOMBRE'].str.contains('PEDIATRIA|GINECOLOGIA', case=False, na=False), 1, 2)
+
+# Ordenar por 'SERVICIO', 'GENERO', 'EDAD' y 'Contiene'
+dfTemporal = dfTemporal.sort_values(by=['SERVICIO', 'GENERO', 'EDAD', 'Contiene'])
+
+# Función asignar_tipologia para asignar 'TIPOLOGIA NOMBRE' según las reglas especificadas
+# revisar si hay una fila cuyo valor de 'TIPOLOGIA NOMBRE' contenga la palabra 'PEDIATRIA'
+# y si 'EDAD' < 14 entonces asignar ese valor de 'TIPOLOGIA NOMBRE', 
+# si no entonces revisar si hay una fila cuyo valor de 'TIPOLOGIA NOMBRE' contenga la palabra 'GINECOLOGIA'
+# y si 'GENERO' = F entonces asignar ese valor de 'TIPOLOGIA NOMBRE',
+# si no entonces identifica la primera fila cuyo valor de 'TIPOLOGIA NOMBRE' no contenga las palabras 'PEDIATRIA' o 'GINECOLOGIA'
+# y asignar ese valor de 'TIPOLOGIA NOMBRE' de lo contrario asignar ''
+def asignar_tipologia(row):
+    # Filtrar por 'PEDIATRIA' y 'EDAD' < 14
+    if 'PEDIATRIA' in row['TIPOLOGIA NOMBRE'] and row['EDAD'] < 14:
+        return row['TIPOLOGIA NOMBRE']
+    
+    # Filtrar por 'GINECOLOGIA' y 'GENERO' = 'F'
+    if 'GINECOLOGIA' in row['TIPOLOGIA NOMBRE'] and row['GENERO'] == 'F':
+        return row['TIPOLOGIA NOMBRE']
+    
+    # Filtrar por 'TIPOLOGIA NOMBRE' que no contenga 'PEDIATRIA' o 'GINECOLOGIA'
+    if not 'PEDIATRIA' in row['TIPOLOGIA NOMBRE'] and not 'GINECOLOGIA' in row['TIPOLOGIA NOMBRE']:
+        return row['TIPOLOGIA NOMBRE']
+    
+    return ''
+
+# Aplicar la función asignar_tipologia para crear la columna 'Valida'
+dfTemporal['Valida'] = dfTemporal.apply(asignar_tipologia, axis=1)
+
+# Eliminar loa 'Valida' = ''
+# Aplicar la función asignar_tipologia para crear la columna 'Valida'
+dfTemporal = dfTemporal[dfTemporal['Valida'] != '']
+
+# Dejar solo la primera fila para cada grupo 'GENERO', 'EDAD', 'SERVICIO'
+dfTemporal = dfTemporal.groupby(['GENERO', 'EDAD', 'SERVICIO']).first().reset_index()
+
+# Agregar columna 'TIPOLOGIA' de dfTemporal a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS'
+dfCapital_sendas = pd.merge(dfCapital_sendas, dfTemporal[['GENERO', 'EDAD', 'SERVICIO', 'TIPOLOGIA NOMBRE']], on=['GENERO', 'EDAD', 'SERVICIO'], how='left')
 
 # Agregar columnas de dfBases a dfCapital_sendas
 
@@ -149,7 +194,7 @@ dfComprobar = dfComprobar.drop(columns=['UsuarioNombre'])
 # Crear columna 'validacion' con valor 0
 dfCapital_sendas['validacion'] = 0
 
-# Quirófano ‘Qxx’
+# Regla Quirófano
 
 # De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][['NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
@@ -194,7 +239,7 @@ dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(valida
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
-# %% Egresos
+# Regla Egreso
 
 # De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][['NumeroFactura', 'CONCEPTO', 'validacion']]
