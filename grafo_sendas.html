@@ -1,0 +1,851 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+                <link href="lib/tom-select/tom-select.css" rel="stylesheet">
+                <script src="lib/tom-select/tom-select.complete.min.js"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 750px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Facturacion_total_NOM_SERVICIO_PRODUCTO">Facturacion_total_NOM_SERVICIO_PRODUCTO</option>
+                                
+                                    <option value="Facturacion_total">Facturacion_total</option>
+                                
+                                    <option value="Facturacion_total_FEC_SERVICIO">Facturacion_total_FEC_SERVICIO</option>
+                                
+                                    <option value="Facturacion_total_CANT_SERVICIO">Facturacion_total_CANT_SERVICIO</option>
+                                
+                                    <option value="Facturacion_total_VALOR_UNITARIO">Facturacion_total_VALOR_UNITARIO</option>
+                                
+                                    <option value="Facturacion_total_VALOR_TOTAL">Facturacion_total_VALOR_TOTAL</option>
+                                
+                                    <option value="Facturacion_total_COD_PLAN">Facturacion_total_COD_PLAN</option>
+                                
+                                    <option value="Facturacion_total_NOM_PLAN">Facturacion_total_NOM_PLAN</option>
+                                
+                                    <option value="Facturacion_total_COD_MEDICO">Facturacion_total_COD_MEDICO</option>
+                                
+                                    <option value="Facturacion_total_NOM_MEDICO">Facturacion_total_NOM_MEDICO</option>
+                                
+                                    <option value="Facturacion_total_CENTRO_DE_COSTO">Facturacion_total_CENTRO_DE_COSTO</option>
+                                
+                                    <option value="Facturacion_total_NOM_CENTROCOS">Facturacion_total_NOM_CENTROCOS</option>
+                                
+                                    <option value="Facturacion_total_SIPCODCUP">Facturacion_total_SIPCODCUP</option>
+                                
+                                    <option value="Facturacion_total_COD_ENTIDAD1">Facturacion_total_COD_ENTIDAD1</option>
+                                
+                                    <option value="Facturacion_total_NOM_ENTIDAD1">Facturacion_total_NOM_ENTIDAD1</option>
+                                
+                                    <option value="Facturacion_total_NUM_EGRESO">Facturacion_total_NUM_EGRESO</option>
+                                
+                                    <option value="Facturacion_total_CODIGO_CUMS">Facturacion_total_CODIGO_CUMS</option>
+                                
+                                    <option value="Facturacion_total_GMETIPMED">Facturacion_total_GMETIPMED</option>
+                                
+                                    <option value="Facturacion_total_AMBITO">Facturacion_total_AMBITO</option>
+                                
+                                    <option value="Facturacion_total_ADEFECSAL">Facturacion_total_ADEFECSAL</option>
+                                
+                                    <option value="capital_sendas_NOMBRE_PACIENTE">capital_sendas_NOMBRE_PACIENTE</option>
+                                
+                                    <option value="capital_sendas">capital_sendas</option>
+                                
+                                    <option value="capital_sendas_FECHA_NACIMIENTO">capital_sendas_FECHA_NACIMIENTO</option>
+                                
+                                    <option value="capital_sendas_EDAD_1">capital_sendas_EDAD_1</option>
+                                
+                                    <option value="capital_sendas_EDAD_2">capital_sendas_EDAD_2</option>
+                                
+                                    <option value="capital_sendas_FEC_SERVICIO">capital_sendas_FEC_SERVICIO</option>
+                                
+                                    <option value="capital_sendas_SERVICIO">capital_sendas_SERVICIO</option>
+                                
+                                    <option value="Condicion_igual_servicio">Condicion_igual_servicio</option>
+                                
+                                    <option value="Condicion_igual_servicio_2">Condicion_igual_servicio_2</option>
+                                
+                                    <option value="Condicion_igual_cups">Condicion_igual_cups</option>
+                                
+                                    <option value="capital_sendas_NOMBRE_SERVICIO">capital_sendas_NOMBRE_SERVICIO</option>
+                                
+                                    <option value="capital_sendas_CONCEPTO">capital_sendas_CONCEPTO</option>
+                                
+                                    <option value="Regla_egreso">Regla_egreso</option>
+                                
+                                    <option value="capital_sendas_GRUPO_QX">capital_sendas_GRUPO_QX</option>
+                                
+                                    <option value="Regla_quirofano">Regla_quirofano</option>
+                                
+                                    <option value="capital_sendas_tipologia">capital_sendas_tipologia</option>
+                                
+                                    <option value="capital_sendas_TIPOLOGIA_NOMBRE">capital_sendas_TIPOLOGIA_NOMBRE</option>
+                                
+                                    <option value="capital_sendas_ips">capital_sendas_ips</option>
+                                
+                                    <option value="capital_sendas_validacion">capital_sendas_validacion</option>
+                                
+                                    <option value="Condicion_igual_factura">Condicion_igual_factura</option>
+                                
+                                    <option value="capital_sendas_TIPO_DOC">capital_sendas_TIPO_DOC</option>
+                                
+                                    <option value="capital_sendas_GENERO">capital_sendas_GENERO</option>
+                                
+                                    <option value="capital_sendas_EDAD">capital_sendas_EDAD</option>
+                                
+                                    <option value="capital_sendas_CUMS">capital_sendas_CUMS</option>
+                                
+                                    <option value="Codigos_consulta_SERVICIO">Codigos_consulta_SERVICIO</option>
+                                
+                                    <option value="Codigos_consulta">Codigos_consulta</option>
+                                
+                                    <option value="Codigos_consulta_CONCEPTO">Codigos_consulta_CONCEPTO</option>
+                                
+                                    <option value="Codigos_consulta_NOM_SERVICIO_PRODUCTO">Codigos_consulta_NOM_SERVICIO_PRODUCTO</option>
+                                
+                                    <option value="Codigos_consulta_GRUPO_QX">Codigos_consulta_GRUPO_QX</option>
+                                
+                                    <option value="Anexos_CUPS">Anexos_CUPS</option>
+                                
+                                    <option value="Anexos">Anexos</option>
+                                
+                                    <option value="Anexos_SERVICIO">Anexos_SERVICIO</option>
+                                
+                                    <option value="Anexos_OBSERVACIONES">Anexos_OBSERVACIONES</option>
+                                
+                                    <option value="Anexos_TIPOLOGIA_NOMBRE">Anexos_TIPOLOGIA_NOMBRE</option>
+                                
+                                    <option value="Anexos_CODIGOS_ANEXOS">Anexos_CODIGOS_ANEXOS</option>
+                                
+                                    <option value="Anexos_TARIFA_CONTRATADA">Anexos_TARIFA_CONTRATADA</option>
+                                
+                                    <option value="Codigo_tipologia_SERVICIO">Codigo_tipologia_SERVICIO</option>
+                                
+                                    <option value="Codigo_tipologia">Codigo_tipologia</option>
+                                
+                                    <option value="Codigo_tipologia_NOM_SERVICIO_PRODUCTO">Codigo_tipologia_NOM_SERVICIO_PRODUCTO</option>
+                                
+                                    <option value="Codigo_tipologia_tipologia">Codigo_tipologia_tipologia</option>
+                                
+                                    <option value="Codigo_tipologia_nombre_tipologia">Codigo_tipologia_nombre_tipologia</option>
+                                
+                                    <option value="capital_sendas_TipoDocumento">capital_sendas_TipoDocumento</option>
+                                
+                                    <option value="capital_sendas_NumeroFactura">capital_sendas_NumeroFactura</option>
+                                
+                                    <option value="capital_sendas_FechaFactura">capital_sendas_FechaFactura</option>
+                                
+                                    <option value="capital_sendas_TotalFactura">capital_sendas_TotalFactura</option>
+                                
+                                    <option value="capital_sendas_ValorCuotaRecuperacion">capital_sendas_ValorCuotaRecuperacion</option>
+                                
+                                    <option value="capital_sendas_ValorPagare">capital_sendas_ValorPagare</option>
+                                
+                                    <option value="capital_sendas_ValorFranquicia">capital_sendas_ValorFranquicia</option>
+                                
+                                    <option value="capital_sendas_ValorReciboCaja">capital_sendas_ValorReciboCaja</option>
+                                
+                                    <option value="capital_sendas_ValorAnticipo">capital_sendas_ValorAnticipo</option>
+                                
+                                    <option value="capital_sendas_Refacturada">capital_sendas_Refacturada</option>
+                                
+                                    <option value="capital_sendas_NumeroIngreso">capital_sendas_NumeroIngreso</option>
+                                
+                                    <option value="capital_sendas_PlanCodigo">capital_sendas_PlanCodigo</option>
+                                
+                                    <option value="capital_sendas_PlanNombre">capital_sendas_PlanNombre</option>
+                                
+                                    <option value="capital_sendas_CentroCodigo">capital_sendas_CentroCodigo</option>
+                                
+                                    <option value="capital_sendas_CentroNombre">capital_sendas_CentroNombre</option>
+                                
+                                    <option value="capital_sendas_ContratoNombre">capital_sendas_ContratoNombre</option>
+                                
+                                    <option value="capital_sendas_ContratoNit">capital_sendas_ContratoNit</option>
+                                
+                                    <option value="capital_sendas_PacienteNombre">capital_sendas_PacienteNombre</option>
+                                
+                                    <option value="capital_sendas_PacienteNit">capital_sendas_PacienteNit</option>
+                                
+                                    <option value="capital_sendas_DOC_PACIENTE_">capital_sendas_DOC_PACIENTE_</option>
+                                
+                                    <option value="Condicion_igual_documento">Condicion_igual_documento</option>
+                                
+                                    <option value="capital_sendas_PacienteCodigo">capital_sendas_PacienteCodigo</option>
+                                
+                                    <option value="capital_sendas_PacienteFechaNac">capital_sendas_PacienteFechaNac</option>
+                                
+                                    <option value="capital_sendas_Tipo">capital_sendas_Tipo</option>
+                                
+                                    <option value="capital_sendas_TotFac">capital_sendas_TotFac</option>
+                                
+                                    <option value="capital_sendas_UsuarioNombre">capital_sendas_UsuarioNombre</option>
+                                
+                                    <option value="capital_sendas_CamaCodigo">capital_sendas_CamaCodigo</option>
+                                
+                                    <option value="capital_sendas_CamaNombre">capital_sendas_CamaNombre</option>
+                                
+                                    <option value="capital_sendas_TipoContrato">capital_sendas_TipoContrato</option>
+                                
+                                    <option value="capital_sendas_TipoPlan">capital_sendas_TipoPlan</option>
+                                
+                                    <option value="capital_sendas_TipoIngreso">capital_sendas_TipoIngreso</option>
+                                
+                                    <option value="capital_sendas_OidFactura">capital_sendas_OidFactura</option>
+                                
+                                    <option value="capital_sendas_ServicioCodigo">capital_sendas_ServicioCodigo</option>
+                                
+                                    <option value="capital_sendas_ServicioNombre">capital_sendas_ServicioNombre</option>
+                                
+                                    <option value="capital_sendas_Cantidad">capital_sendas_Cantidad</option>
+                                
+                                    <option value="capital_sendas_FechaServicio">capital_sendas_FechaServicio</option>
+                                
+                                    <option value="capital_sendas_GrupoSerCodigo">capital_sendas_GrupoSerCodigo</option>
+                                
+                                    <option value="capital_sendas_GrupoSerNombre">capital_sendas_GrupoSerNombre</option>
+                                
+                                    <option value="capital_sendas_SubgrupoCodigo">capital_sendas_SubgrupoCodigo</option>
+                                
+                                    <option value="capital_sendas_SubgrupoNombre">capital_sendas_SubgrupoNombre</option>
+                                
+                                    <option value="capital_sendas_MedicoCodigo">capital_sendas_MedicoCodigo</option>
+                                
+                                    <option value="capital_sendas_MedicoNombre">capital_sendas_MedicoNombre</option>
+                                
+                                    <option value="capital_sendas_CentroCosCodigo">capital_sendas_CentroCosCodigo</option>
+                                
+                                    <option value="capital_sendas_CentroCosNombre">capital_sendas_CentroCosNombre</option>
+                                
+                                    <option value="capital_sendas_AreaCodigo">capital_sendas_AreaCodigo</option>
+                                
+                                    <option value="capital_sendas_AreaNombre">capital_sendas_AreaNombre</option>
+                                
+                                    <option value="capital_sendas_GrupoQuiCodigo">capital_sendas_GrupoQuiCodigo</option>
+                                
+                                    <option value="capital_sendas_GrupoQuiNombre">capital_sendas_GrupoQuiNombre</option>
+                                
+                                    <option value="capital_sendas_ValPac">capital_sendas_ValPac</option>
+                                
+                                    <option value="capital_sendas_ValEnt">capital_sendas_ValEnt</option>
+                                
+                                    <option value="capital_sendas_TotSer">capital_sendas_TotSer</option>
+                                
+                                    <option value="capital_sendas_IngresoPor">capital_sendas_IngresoPor</option>
+                                
+                                    <option value="capital_sendas_AMBITO">capital_sendas_AMBITO</option>
+                                
+                                    <option value="capital_sendas_FechaIngreso">capital_sendas_FechaIngreso</option>
+                                
+                                    <option value="capital_sendas_FechaEgreso">capital_sendas_FechaEgreso</option>
+                                
+                                    <option value="capital_sendas_FechaEgreso_">capital_sendas_FechaEgreso_</option>
+                                
+                                    <option value="capital_sendas_DiagIngrCod">capital_sendas_DiagIngrCod</option>
+                                
+                                    <option value="capital_sendas_DiagIngrNom">capital_sendas_DiagIngrNom</option>
+                                
+                                    <option value="capital_sendas_DiagEgreCod">capital_sendas_DiagEgreCod</option>
+                                
+                                    <option value="capital_sendas_DiagEgreNom">capital_sendas_DiagEgreNom</option>
+                                
+                                    <option value="capital_sendas_DiagMuerCod">capital_sendas_DiagMuerCod</option>
+                                
+                                    <option value="capital_sendas_DiagMuerNom">capital_sendas_DiagMuerNom</option>
+                                
+                                    <option value="capital_sendas_EspeTratCod">capital_sendas_EspeTratCod</option>
+                                
+                                    <option value="capital_sendas_EspeTratNom">capital_sendas_EspeTratNom</option>
+                                
+                                    <option value="capital_sendas_TIPO_DOC_">capital_sendas_TIPO_DOC_</option>
+                                
+                                    <option value="Facturacion_rips_TipoDocumento">Facturacion_rips_TipoDocumento</option>
+                                
+                                    <option value="Facturacion_rips">Facturacion_rips</option>
+                                
+                                    <option value="Facturacion_rips_NumeroFactura">Facturacion_rips_NumeroFactura</option>
+                                
+                                    <option value="Facturacion_rips_FechaFactura">Facturacion_rips_FechaFactura</option>
+                                
+                                    <option value="Facturacion_rips_TotalFactura">Facturacion_rips_TotalFactura</option>
+                                
+                                    <option value="Facturacion_rips_ValorCuotaRecuperacion">Facturacion_rips_ValorCuotaRecuperacion</option>
+                                
+                                    <option value="Facturacion_rips_ValorPagare">Facturacion_rips_ValorPagare</option>
+                                
+                                    <option value="Facturacion_rips_ValorFranquicia">Facturacion_rips_ValorFranquicia</option>
+                                
+                                    <option value="Facturacion_rips_ValorReciboCaja">Facturacion_rips_ValorReciboCaja</option>
+                                
+                                    <option value="Facturacion_rips_ValorAnticipo">Facturacion_rips_ValorAnticipo</option>
+                                
+                                    <option value="Facturacion_rips_Refacturada">Facturacion_rips_Refacturada</option>
+                                
+                                    <option value="Facturacion_rips_NumeroIngreso">Facturacion_rips_NumeroIngreso</option>
+                                
+                                    <option value="Facturacion_rips_PlanCodigo">Facturacion_rips_PlanCodigo</option>
+                                
+                                    <option value="Facturacion_rips_PlanNombre">Facturacion_rips_PlanNombre</option>
+                                
+                                    <option value="Facturacion_rips_CentroCodigo">Facturacion_rips_CentroCodigo</option>
+                                
+                                    <option value="Facturacion_rips_CentroNombre">Facturacion_rips_CentroNombre</option>
+                                
+                                    <option value="Facturacion_rips_ContratoNombre">Facturacion_rips_ContratoNombre</option>
+                                
+                                    <option value="Facturacion_rips_ContratoNit">Facturacion_rips_ContratoNit</option>
+                                
+                                    <option value="Facturacion_rips_PacienteNombre">Facturacion_rips_PacienteNombre</option>
+                                
+                                    <option value="Facturacion_rips_PacienteNit">Facturacion_rips_PacienteNit</option>
+                                
+                                    <option value="Facturacion_rips_PacienteCodigo">Facturacion_rips_PacienteCodigo</option>
+                                
+                                    <option value="Facturacion_rips_PacienteFechaNac">Facturacion_rips_PacienteFechaNac</option>
+                                
+                                    <option value="Facturacion_rips_Tipo">Facturacion_rips_Tipo</option>
+                                
+                                    <option value="Facturacion_rips_TotFac">Facturacion_rips_TotFac</option>
+                                
+                                    <option value="Facturacion_rips_UsuarioNombre">Facturacion_rips_UsuarioNombre</option>
+                                
+                                    <option value="Facturacion_rips_CamaCodigo">Facturacion_rips_CamaCodigo</option>
+                                
+                                    <option value="Facturacion_rips_CamaNombre">Facturacion_rips_CamaNombre</option>
+                                
+                                    <option value="Facturacion_rips_TipoContrato">Facturacion_rips_TipoContrato</option>
+                                
+                                    <option value="Facturacion_rips_TipoPlan">Facturacion_rips_TipoPlan</option>
+                                
+                                    <option value="Facturacion_rips_TipoIngreso">Facturacion_rips_TipoIngreso</option>
+                                
+                                    <option value="Facturacion_rips_OidFactura">Facturacion_rips_OidFactura</option>
+                                
+                                    <option value="Facturacion_rips_ServicioCodigo">Facturacion_rips_ServicioCodigo</option>
+                                
+                                    <option value="Facturacion_rips_ServicioNombre">Facturacion_rips_ServicioNombre</option>
+                                
+                                    <option value="Facturacion_rips_Cantidad">Facturacion_rips_Cantidad</option>
+                                
+                                    <option value="Facturacion_rips_FechaServicio">Facturacion_rips_FechaServicio</option>
+                                
+                                    <option value="Facturacion_rips_GrupoSerCodigo">Facturacion_rips_GrupoSerCodigo</option>
+                                
+                                    <option value="Facturacion_rips_GrupoSerNombre">Facturacion_rips_GrupoSerNombre</option>
+                                
+                                    <option value="Facturacion_rips_SubgrupoCodigo">Facturacion_rips_SubgrupoCodigo</option>
+                                
+                                    <option value="Facturacion_rips_SubgrupoNombre">Facturacion_rips_SubgrupoNombre</option>
+                                
+                                    <option value="Facturacion_rips_MedicoCodigo">Facturacion_rips_MedicoCodigo</option>
+                                
+                                    <option value="Facturacion_rips_MedicoNombre">Facturacion_rips_MedicoNombre</option>
+                                
+                                    <option value="Facturacion_rips_CentroCosCodigo">Facturacion_rips_CentroCosCodigo</option>
+                                
+                                    <option value="Facturacion_rips_CentroCosNombre">Facturacion_rips_CentroCosNombre</option>
+                                
+                                    <option value="Facturacion_rips_AreaCodigo">Facturacion_rips_AreaCodigo</option>
+                                
+                                    <option value="Facturacion_rips_AreaNombre">Facturacion_rips_AreaNombre</option>
+                                
+                                    <option value="Facturacion_rips_GrupoQuiCodigo">Facturacion_rips_GrupoQuiCodigo</option>
+                                
+                                    <option value="Facturacion_rips_GrupoQuiNombre">Facturacion_rips_GrupoQuiNombre</option>
+                                
+                                    <option value="Facturacion_rips_ValPac">Facturacion_rips_ValPac</option>
+                                
+                                    <option value="Facturacion_rips_ValEnt">Facturacion_rips_ValEnt</option>
+                                
+                                    <option value="Facturacion_rips_TotSer">Facturacion_rips_TotSer</option>
+                                
+                                    <option value="Facturacion_rips_IngresoPor">Facturacion_rips_IngresoPor</option>
+                                
+                                    <option value="Facturacion_rips_FechaIngreso">Facturacion_rips_FechaIngreso</option>
+                                
+                                    <option value="Facturacion_rips_FechaEgreso">Facturacion_rips_FechaEgreso</option>
+                                
+                                    <option value="Facturacion_rips_DiagIngrCod">Facturacion_rips_DiagIngrCod</option>
+                                
+                                    <option value="Facturacion_rips_DiagIngrNom">Facturacion_rips_DiagIngrNom</option>
+                                
+                                    <option value="Facturacion_rips_DiagEgreCod">Facturacion_rips_DiagEgreCod</option>
+                                
+                                    <option value="Facturacion_rips_DiagEgreNom">Facturacion_rips_DiagEgreNom</option>
+                                
+                                    <option value="Facturacion_rips_DiagMuerCod">Facturacion_rips_DiagMuerCod</option>
+                                
+                                    <option value="Facturacion_rips_DiagMuerNom">Facturacion_rips_DiagMuerNom</option>
+                                
+                                    <option value="Facturacion_rips_EspeTratCod">Facturacion_rips_EspeTratCod</option>
+                                
+                                    <option value="Facturacion_rips_EspeTratNom">Facturacion_rips_EspeTratNom</option>
+                                
+                                    <option value="Facturacion_total_CENTRO">Facturacion_total_CENTRO</option>
+                                
+                                    <option value="Facturacion_total_FACTURA">Facturacion_total_FACTURA</option>
+                                
+                                    <option value="Facturacion_total_FECHA_FACT">Facturacion_total_FECHA_FACT</option>
+                                
+                                    <option value="Facturacion_total_TIPO_FACTURA">Facturacion_total_TIPO_FACTURA</option>
+                                
+                                    <option value="Facturacion_total_INGRESO">Facturacion_total_INGRESO</option>
+                                
+                                    <option value="Facturacion_total_FEC_INGRESO">Facturacion_total_FEC_INGRESO</option>
+                                
+                                    <option value="Facturacion_total_COD_USU_FACTURADOR">Facturacion_total_COD_USU_FACTURADOR</option>
+                                
+                                    <option value="Facturacion_total_NOM_FACTURADOR">Facturacion_total_NOM_FACTURADOR</option>
+                                
+                                    <option value="Facturacion_total_DOC_PACIENTE">Facturacion_total_DOC_PACIENTE</option>
+                                
+                                    <option value="Facturacion_total_PACTIPDOC">Facturacion_total_PACTIPDOC</option>
+                                
+                                    <option value="Facturacion_total_TIPO_DOC">Facturacion_total_TIPO_DOC</option>
+                                
+                                    <option value="Facturacion_total_ESTADO_PAC">Facturacion_total_ESTADO_PAC</option>
+                                
+                                    <option value="Facturacion_total_NOMBRE_PACIENTE">Facturacion_total_NOMBRE_PACIENTE</option>
+                                
+                                    <option value="Facturacion_total_COD_PACIENTE">Facturacion_total_COD_PACIENTE</option>
+                                
+                                    <option value="Facturacion_total_FEC_NACIMIENTO">Facturacion_total_FEC_NACIMIENTO</option>
+                                
+                                    <option value="Facturacion_total_GENERO">Facturacion_total_GENERO</option>
+                                
+                                    <option value="Facturacion_total_EDAD">Facturacion_total_EDAD</option>
+                                
+                                    <option value="Facturacion_total_ESTRATO">Facturacion_total_ESTRATO</option>
+                                
+                                    <option value="Facturacion_total_NOM_ESTRATO">Facturacion_total_NOM_ESTRATO</option>
+                                
+                                    <option value="Facturacion_total_VALOR_ENTIDAD">Facturacion_total_VALOR_ENTIDAD</option>
+                                
+                                    <option value="Facturacion_total_VALOR_PACIENTE">Facturacion_total_VALOR_PACIENTE</option>
+                                
+                                    <option value="Facturacion_total_SERVICIO">Facturacion_total_SERVICIO</option>
+                                
+                                    <option value="Facturacion_total_CUMS">Facturacion_total_CUMS</option>
+                                
+                                    <option value="Facturacion_total_PRODUCTO">Facturacion_total_PRODUCTO</option>
+                                
+                                    <option value="bases_norte_documento">bases_norte_documento</option>
+                                
+                                    <option value="bases_norte">bases_norte</option>
+                                
+                                    <option value="bases_norte_ips">bases_norte_ips</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "aqua", "id": "Facturacion_total_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 25"}, {"color": "yellow", "id": "Facturacion_total", "label": "Facturacion_total", "shape": "dot", "size": 30, "title": "Reporte generado de DGH"}, {"color": "aqua", "id": "Facturacion_total_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 3, "title": "Columna 26"}, {"color": "aqua", "id": "Facturacion_total_CANT_SERVICIO", "label": "CANT_SERVICIO", "shape": "dot", "size": 3, "title": "Columna 27"}, {"color": "aqua", "id": "Facturacion_total_VALOR_UNITARIO", "label": "VALOR_UNITARIO", "shape": "dot", "size": 3, "title": "Columna 28"}, {"color": "aqua", "id": "Facturacion_total_VALOR_TOTAL", "label": "VALOR_TOTAL", "shape": "dot", "size": 3, "title": "Columna 29"}, {"color": "aqua", "id": "Facturacion_total_COD_PLAN", "label": "COD_PLAN", "shape": "dot", "size": 3, "title": "Columna 30"}, {"color": "aqua", "id": "Facturacion_total_NOM_PLAN", "label": "NOM_PLAN", "shape": "dot", "size": 3, "title": "Columna 31"}, {"color": "aqua", "id": "Facturacion_total_COD_MEDICO", "label": "COD_MEDICO", "shape": "dot", "size": 3, "title": "Columna 32"}, {"color": "aqua", "id": "Facturacion_total_NOM_MEDICO", "label": "NOM_MEDICO", "shape": "dot", "size": 3, "title": "Columna 33"}, {"color": "aqua", "id": "Facturacion_total_CENTRO_DE_COSTO", "label": "CENTRO_DE_COSTO", "shape": "dot", "size": 3, "title": "Columna 34"}, {"color": "aqua", "id": "Facturacion_total_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 3, "title": "Columna 35"}, {"color": "aqua", "id": "Facturacion_total_SIPCODCUP", "label": "SIPCODCUP", "shape": "dot", "size": 3, "title": "Columna 36"}, {"color": "aqua", "id": "Facturacion_total_COD_ENTIDAD1", "label": "COD_ENTIDAD1", "shape": "dot", "size": 3, "title": "Columna 37"}, {"color": "aqua", "id": "Facturacion_total_NOM_ENTIDAD1", "label": "NOM_ENTIDAD1", "shape": "dot", "size": 3, "title": "Columna 38"}, {"color": "aqua", "id": "Facturacion_total_NUM_EGRESO", "label": "NUM_EGRESO", "shape": "dot", "size": 3, "title": "Columna 39"}, {"color": "aqua", "id": "Facturacion_total_CODIGO_CUMS", "label": "CODIGO_CUMS", "shape": "dot", "size": 3, "title": "Columna 40"}, {"color": "aqua", "id": "Facturacion_total_GMETIPMED", "label": "GMETIPMED", "shape": "dot", "size": 3, "title": "Columna 41"}, {"color": "aqua", "id": "Facturacion_total_AMBITO", "label": "AMBITO", "shape": "dot", "size": 3, "title": "Columna 42"}, {"color": "aqua", "id": "Facturacion_total_ADEFECSAL", "label": "ADEFECSAL", "shape": "dot", "size": 3, "title": "Columna 43"}, {"color": "aqua", "id": "capital_sendas_NOMBRE_PACIENTE", "label": "NOMBRE_PACIENTE", "shape": "dot", "size": 6, "title": "Columna 69"}, {"color": "yellow", "id": "capital_sendas", "label": "capital_sendas", "shape": "dot", "size": 30, "title": "Reporte resultante del procesamiento"}, {"color": "aqua", "id": "capital_sendas_FECHA_NACIMIENTO", "label": "FECHA_NACIMIENTO", "shape": "dot", "size": 12, "title": "Columna 70"}, {"color": "aqua", "id": "capital_sendas_EDAD_1", "label": "EDAD_1", "shape": "dot", "size": 9, "title": "Columna 76, Calculo: (FEC_SERVICIO - FECHA_NACIMIENTO).apply(lambda x:\n x.days // 365 if x.days \u003e= 365 else (x.days // 30 if x.days \u003e= 30 else x.days))"}, {"color": "aqua", "id": "capital_sendas_EDAD_2", "label": "EDAD_2", "shape": "dot", "size": 9, "title": "Columna 77, Calculo: (FEC_SERVICIO - FECHA_NACIMIENTO).apply(lambda x:\n A\u00f1os if x.days \u003e= 365 else (Meses if x.days \u003e= 30 else D\u00edas))"}, {"color": "aqua", "id": "capital_sendas_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 12, "title": "Columna 71"}, {"color": "aqua", "id": "capital_sendas_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 15, "title": "Columna 72"}, {"color": "lime", "id": "Condicion_igual_servicio", "label": "Condicion_igual_servicio", "shape": "dot", "size": 12, "title": "SERVICIO es igual entre capital_sendas y Codigos_consulta"}, {"color": "lime", "id": "Condicion_igual_servicio_2", "label": "Condicion_igual_servicio_2", "shape": "dot", "size": 9, "title": "SERVICIO es igual entre capital_sendas y Codigo_tipologia"}, {"color": "lime", "id": "Condicion_igual_cups", "label": "Condicion_igual_cups", "shape": "dot", "size": 9, "title": "SERVICIO es igual a CUPS entre capital_sendas y Anexos"}, {"color": "aqua", "id": "capital_sendas_NOMBRE_SERVICIO", "label": "NOMBRE_SERVICIO", "shape": "dot", "size": 6, "title": "Columna 73"}, {"color": "aqua", "id": "capital_sendas_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 12, "title": "Columna 74"}, {"color": "red", "id": "Regla_egreso", "label": "Regla_egreso", "shape": "dot", "size": 9, "title": "Regla egreso: por cada grupo de NumeroFactura de capital_sendas,\n filtrar CONCEPTO por los que comiencen por UCI, HOSPITALIZACION GENERAL y U.SALUD MENTAL,\n cobrar solo 1 de cada tipo de CONCEPTO"}, {"color": "aqua", "id": "capital_sendas_GRUPO_QX", "label": "GRUPO_QX", "shape": "dot", "size": 12, "title": "Columna 75"}, {"color": "red", "id": "Regla_quirofano", "label": "Regla_quirofano", "shape": "dot", "size": 12, "title": "Regla quirofano: por cada grupo de NumeroFactura, FechaServicio de capital_sendas,\n cobrar m\u00e1ximo 3 registros de la misma factura fecha,\n cobrar m\u00e1ximo 2 del mayor grupo quir\u00fargico y 1 del siguiente mayor grupo quir\u00fargico,\n si solo hay 3 registros del mismo grupo quir\u00fargico, solo cobrar 2"}, {"color": "aqua", "id": "capital_sendas_tipologia", "label": "tipologia", "shape": "dot", "size": 9, "title": "Columna 78"}, {"color": "aqua", "id": "capital_sendas_TIPOLOGIA_NOMBRE", "label": "TIPOLOGIA_NOMBRE", "shape": "dot", "size": 15, "title": "Columna 79, Calculo: revisar si hay una fila cuyo valor de \u0027TIPOLOGIA NOMBRE\u0027 contenga la palabra \u0027PEDIATRIA\u0027\n y si \u0027EDAD\u0027 \u003c 14 entonces asignar ese valor de \u0027TIPOLOGIA NOMBRE\u0027, \n si no entonces revisar si hay una fila cuyo valor de \u0027TIPOLOGIA NOMBRE\u0027 contenga la palabra \u0027GINECOLOGIA\u0027\n y si \u0027GENERO\u0027 = F entonces asignar ese valor de \u0027TIPOLOGIA NOMBRE\u0027,\n si no entonces identifica la primera fila cuyo valor de \u0027TIPOLOGIA NOMBRE\u0027 no contenga las palabras \u0027PEDIATRIA\u0027 o \u0027GINECOLOGIA\u0027\n y asignar ese valor de \u0027TIPOLOGIA NOMBRE\u0027 de lo contrario asignar \u0027\u0027"}, {"color": "aqua", "id": "capital_sendas_ips", "label": "ips", "shape": "dot", "size": 9, "title": "Columna 80"}, {"color": "aqua", "id": "capital_sendas_validacion", "label": "validacion", "shape": "dot", "size": 9, "title": "Columna 81"}, {"color": "lime", "id": "Condicion_igual_factura", "label": "Condicion_igual_factura", "shape": "dot", "size": 18, "title": "NumeroFactura es igual a FACTURA entre Facturacion_rips y Facturacion_total"}, {"color": "aqua", "id": "capital_sendas_TIPO_DOC", "label": "TIPO_DOC", "shape": "dot", "size": 12, "title": "Columna 61"}, {"color": "aqua", "id": "capital_sendas_GENERO", "label": "GENERO", "shape": "dot", "size": 12, "title": "Columna 62"}, {"color": "aqua", "id": "capital_sendas_EDAD", "label": "EDAD", "shape": "dot", "size": 12, "title": "Columna 63"}, {"color": "aqua", "id": "capital_sendas_CUMS", "label": "CUMS", "shape": "dot", "size": 9, "title": "Columna 64"}, {"color": "aqua", "id": "Codigos_consulta_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Codigos_consulta", "label": "Codigos_consulta", "shape": "dot", "size": 12, "title": "Archivo externo C\u00f3digos consultas"}, {"color": "aqua", "id": "Codigos_consulta_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 3"}, {"color": "aqua", "id": "Codigos_consulta_GRUPO_QX", "label": "GRUPO_QX", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Anexos_CUPS", "label": "CUPS", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Anexos", "label": "Anexos", "shape": "dot", "size": 18, "title": "Archivo externo Anexos Capital Salud unificados 2023"}, {"color": "aqua", "id": "Anexos_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 3, "title": "Columna 2"}, {"color": "aqua", "id": "Anexos_OBSERVACIONES", "label": "OBSERVACIONES", "shape": "dot", "size": 3, "title": "Columna 3"}, {"color": "aqua", "id": "Anexos_TIPOLOGIA_NOMBRE", "label": "TIPOLOGIA_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Anexos_CODIGOS_ANEXOS", "label": "CODIGOS_ANEXOS", "shape": "dot", "size": 3, "title": "Columna 5"}, {"color": "aqua", "id": "Anexos_TARIFA_CONTRATADA", "label": "TARIFA_CONTRATADA", "shape": "dot", "size": 3, "title": "Columna 6"}, {"color": "aqua", "id": "Codigo_tipologia_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Codigo_tipologia", "label": "Codigo_tipologia", "shape": "dot", "size": 12, "title": "Archivo externo Codigo tipologia"}, {"color": "aqua", "id": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 2"}, {"color": "aqua", "id": "Codigo_tipologia_tipologia", "label": "tipologia", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Codigo_tipologia_nombre_tipologia", "label": "nombre_tipologia", "shape": "dot", "size": 3, "title": "Columna 4"}, {"color": "aqua", "id": "capital_sendas_TipoDocumento", "label": "TipoDocumento", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "capital_sendas_NumeroFactura", "label": "NumeroFactura", "shape": "dot", "size": 15, "title": "Columna 2"}, {"color": "aqua", "id": "capital_sendas_FechaFactura", "label": "FechaFactura", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "capital_sendas_TotalFactura", "label": "TotalFactura", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "capital_sendas_ValorCuotaRecuperacion", "label": "ValorCuotaRecuperacion", "shape": "dot", "size": 6, "title": "Columna 5"}, {"color": "aqua", "id": "capital_sendas_ValorPagare", "label": "ValorPagare", "shape": "dot", "size": 6, "title": "Columna 6"}, {"color": "aqua", "id": "capital_sendas_ValorFranquicia", "label": "ValorFranquicia", "shape": "dot", "size": 6, "title": "Columna 7"}, {"color": "aqua", "id": "capital_sendas_ValorReciboCaja", "label": "ValorReciboCaja", "shape": "dot", "size": 6, "title": "Columna 8"}, {"color": "aqua", "id": "capital_sendas_ValorAnticipo", "label": "ValorAnticipo", "shape": "dot", "size": 6, "title": "Columna 9"}, {"color": "aqua", "id": "capital_sendas_Refacturada", "label": "Refacturada", "shape": "dot", "size": 6, "title": "Columna 10"}, {"color": "aqua", "id": "capital_sendas_NumeroIngreso", "label": "NumeroIngreso", "shape": "dot", "size": 6, "title": "Columna 11"}, {"color": "aqua", "id": "capital_sendas_PlanCodigo", "label": "PlanCodigo", "shape": "dot", "size": 6, "title": "Columna 12"}, {"color": "aqua", "id": "capital_sendas_PlanNombre", "label": "PlanNombre", "shape": "dot", "size": 6, "title": "Columna 13"}, {"color": "aqua", "id": "capital_sendas_CentroCodigo", "label": "CentroCodigo", "shape": "dot", "size": 6, "title": "Columna 14"}, {"color": "aqua", "id": "capital_sendas_CentroNombre", "label": "CentroNombre", "shape": "dot", "size": 6, "title": "Columna 15"}, {"color": "aqua", "id": "capital_sendas_ContratoNombre", "label": "ContratoNombre", "shape": "dot", "size": 6, "title": "Columna 16"}, {"color": "aqua", "id": "capital_sendas_ContratoNit", "label": "ContratoNit", "shape": "dot", "size": 6, "title": "Columna 17"}, {"color": "aqua", "id": "capital_sendas_PacienteNombre", "label": "PacienteNombre", "shape": "dot", "size": 9, "title": "Columna 18"}, {"color": "aqua", "id": "capital_sendas_PacienteNit", "label": "PacienteNit", "shape": "dot", "size": 12, "title": "Columna 19"}, {"color": "aqua", "id": "capital_sendas_DOC_PACIENTE_", "label": "DOC_PACIENTE_", "shape": "dot", "size": 6, "title": "Columna 68"}, {"color": "lime", "id": "Condicion_igual_documento", "label": "Condicion_igual_documento", "shape": "dot", "size": 9, "title": "PacienteNit es igual a documento entre capital_sendas y bases_norte"}, {"color": "aqua", "id": "capital_sendas_PacienteCodigo", "label": "PacienteCodigo", "shape": "dot", "size": 6, "title": "Columna 20"}, {"color": "aqua", "id": "capital_sendas_PacienteFechaNac", "label": "PacienteFechaNac", "shape": "dot", "size": 9, "title": "Columna 21"}, {"color": "aqua", "id": "capital_sendas_Tipo", "label": "Tipo", "shape": "dot", "size": 6, "title": "Columna 22"}, {"color": "aqua", "id": "capital_sendas_TotFac", "label": "TotFac", "shape": "dot", "size": 6, "title": "Columna 23"}, {"color": "aqua", "id": "capital_sendas_UsuarioNombre", "label": "UsuarioNombre", "shape": "dot", "size": 6, "title": "Columna 24"}, {"color": "aqua", "id": "capital_sendas_CamaCodigo", "label": "CamaCodigo", "shape": "dot", "size": 6, "title": "Columna 25"}, {"color": "aqua", "id": "capital_sendas_CamaNombre", "label": "CamaNombre", "shape": "dot", "size": 6, "title": "Columna 26"}, {"color": "aqua", "id": "capital_sendas_TipoContrato", "label": "TipoContrato", "shape": "dot", "size": 6, "title": "Columna 27"}, {"color": "aqua", "id": "capital_sendas_TipoPlan", "label": "TipoPlan", "shape": "dot", "size": 6, "title": "Columna 28"}, {"color": "aqua", "id": "capital_sendas_TipoIngreso", "label": "TipoIngreso", "shape": "dot", "size": 6, "title": "Columna 29"}, {"color": "aqua", "id": "capital_sendas_OidFactura", "label": "OidFactura", "shape": "dot", "size": 6, "title": "Columna 30"}, {"color": "aqua", "id": "capital_sendas_ServicioCodigo", "label": "ServicioCodigo", "shape": "dot", "size": 9, "title": "Columna 31"}, {"color": "aqua", "id": "capital_sendas_ServicioNombre", "label": "ServicioNombre", "shape": "dot", "size": 9, "title": "Columna 32"}, {"color": "aqua", "id": "capital_sendas_Cantidad", "label": "Cantidad", "shape": "dot", "size": 6, "title": "Columna 33"}, {"color": "aqua", "id": "capital_sendas_FechaServicio", "label": "FechaServicio", "shape": "dot", "size": 12, "title": "Columna 34"}, {"color": "aqua", "id": "capital_sendas_GrupoSerCodigo", "label": "GrupoSerCodigo", "shape": "dot", "size": 6, "title": "Columna 35"}, {"color": "aqua", "id": "capital_sendas_GrupoSerNombre", "label": "GrupoSerNombre", "shape": "dot", "size": 6, "title": "Columna 36"}, {"color": "aqua", "id": "capital_sendas_SubgrupoCodigo", "label": "SubgrupoCodigo", "shape": "dot", "size": 6, "title": "Columna 37"}, {"color": "aqua", "id": "capital_sendas_SubgrupoNombre", "label": "SubgrupoNombre", "shape": "dot", "size": 6, "title": "Columna 38"}, {"color": "aqua", "id": "capital_sendas_MedicoCodigo", "label": "MedicoCodigo", "shape": "dot", "size": 6, "title": "Columna 39"}, {"color": "aqua", "id": "capital_sendas_MedicoNombre", "label": "MedicoNombre", "shape": "dot", "size": 6, "title": "Columna 40"}, {"color": "aqua", "id": "capital_sendas_CentroCosCodigo", "label": "CentroCosCodigo", "shape": "dot", "size": 6, "title": "Columna 41"}, {"color": "aqua", "id": "capital_sendas_CentroCosNombre", "label": "CentroCosNombre", "shape": "dot", "size": 6, "title": "Columna 42"}, {"color": "aqua", "id": "capital_sendas_AreaCodigo", "label": "AreaCodigo", "shape": "dot", "size": 6, "title": "Columna 43"}, {"color": "aqua", "id": "capital_sendas_AreaNombre", "label": "AreaNombre", "shape": "dot", "size": 6, "title": "Columna 44"}, {"color": "aqua", "id": "capital_sendas_GrupoQuiCodigo", "label": "GrupoQuiCodigo", "shape": "dot", "size": 6, "title": "Columna 45"}, {"color": "aqua", "id": "capital_sendas_GrupoQuiNombre", "label": "GrupoQuiNombre", "shape": "dot", "size": 6, "title": "Columna 46"}, {"color": "aqua", "id": "capital_sendas_ValPac", "label": "ValPac", "shape": "dot", "size": 6, "title": "Columna 47"}, {"color": "aqua", "id": "capital_sendas_ValEnt", "label": "ValEnt", "shape": "dot", "size": 6, "title": "Columna 48"}, {"color": "aqua", "id": "capital_sendas_TotSer", "label": "TotSer", "shape": "dot", "size": 6, "title": "Columna 49"}, {"color": "aqua", "id": "capital_sendas_IngresoPor", "label": "IngresoPor", "shape": "dot", "size": 9, "title": "Columna 50"}, {"color": "aqua", "id": "capital_sendas_AMBITO", "label": "AMBITO", "shape": "dot", "size": 6, "title": "Columna 65"}, {"color": "aqua", "id": "capital_sendas_FechaIngreso", "label": "FechaIngreso", "shape": "dot", "size": 6, "title": "Columna 51"}, {"color": "aqua", "id": "capital_sendas_FechaEgreso", "label": "FechaEgreso", "shape": "dot", "size": 9, "title": "Columna 52"}, {"color": "aqua", "id": "capital_sendas_FechaEgreso_", "label": "FechaEgreso_", "shape": "dot", "size": 6, "title": "Columna 66"}, {"color": "aqua", "id": "capital_sendas_DiagIngrCod", "label": "DiagIngrCod", "shape": "dot", "size": 6, "title": "Columna 53"}, {"color": "aqua", "id": "capital_sendas_DiagIngrNom", "label": "DiagIngrNom", "shape": "dot", "size": 6, "title": "Columna 54"}, {"color": "aqua", "id": "capital_sendas_DiagEgreCod", "label": "DiagEgreCod", "shape": "dot", "size": 6, "title": "Columna 55"}, {"color": "aqua", "id": "capital_sendas_DiagEgreNom", "label": "DiagEgreNom", "shape": "dot", "size": 6, "title": "Columna 56"}, {"color": "aqua", "id": "capital_sendas_DiagMuerCod", "label": "DiagMuerCod", "shape": "dot", "size": 6, "title": "Columna 57"}, {"color": "aqua", "id": "capital_sendas_DiagMuerNom", "label": "DiagMuerNom", "shape": "dot", "size": 6, "title": "Columna 58"}, {"color": "aqua", "id": "capital_sendas_EspeTratCod", "label": "EspeTratCod", "shape": "dot", "size": 6, "title": "Columna 59"}, {"color": "aqua", "id": "capital_sendas_EspeTratNom", "label": "EspeTratNom", "shape": "dot", "size": 6, "title": "Columna 60"}, {"color": "aqua", "id": "capital_sendas_TIPO_DOC_", "label": "TIPO_DOC_", "shape": "dot", "size": 6, "title": "Columna 67"}, {"color": "aqua", "id": "Facturacion_rips_TipoDocumento", "label": "TipoDocumento", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Facturacion_rips", "label": "Facturacion_rips", "shape": "dot", "size": 30, "title": "Reporte generado de DGH"}, {"color": "aqua", "id": "Facturacion_rips_NumeroFactura", "label": "NumeroFactura", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Facturacion_rips_FechaFactura", "label": "FechaFactura", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Facturacion_rips_TotalFactura", "label": "TotalFactura", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Facturacion_rips_ValorCuotaRecuperacion", "label": "ValorCuotaRecuperacion", "shape": "dot", "size": 6, "title": "Columna 5"}, {"color": "aqua", "id": "Facturacion_rips_ValorPagare", "label": "ValorPagare", "shape": "dot", "size": 6, "title": "Columna 6"}, {"color": "aqua", "id": "Facturacion_rips_ValorFranquicia", "label": "ValorFranquicia", "shape": "dot", "size": 6, "title": "Columna 7"}, {"color": "aqua", "id": "Facturacion_rips_ValorReciboCaja", "label": "ValorReciboCaja", "shape": "dot", "size": 6, "title": "Columna 8"}, {"color": "aqua", "id": "Facturacion_rips_ValorAnticipo", "label": "ValorAnticipo", "shape": "dot", "size": 6, "title": "Columna 9"}, {"color": "aqua", "id": "Facturacion_rips_Refacturada", "label": "Refacturada", "shape": "dot", "size": 6, "title": "Columna 10"}, {"color": "aqua", "id": "Facturacion_rips_NumeroIngreso", "label": "NumeroIngreso", "shape": "dot", "size": 6, "title": "Columna 11"}, {"color": "aqua", "id": "Facturacion_rips_PlanCodigo", "label": "PlanCodigo", "shape": "dot", "size": 6, "title": "Columna 12"}, {"color": "aqua", "id": "Facturacion_rips_PlanNombre", "label": "PlanNombre", "shape": "dot", "size": 6, "title": "Columna 13"}, {"color": "aqua", "id": "Facturacion_rips_CentroCodigo", "label": "CentroCodigo", "shape": "dot", "size": 6, "title": "Columna 14"}, {"color": "aqua", "id": "Facturacion_rips_CentroNombre", "label": "CentroNombre", "shape": "dot", "size": 6, "title": "Columna 15"}, {"color": "aqua", "id": "Facturacion_rips_ContratoNombre", "label": "ContratoNombre", "shape": "dot", "size": 6, "title": "Columna 16"}, {"color": "aqua", "id": "Facturacion_rips_ContratoNit", "label": "ContratoNit", "shape": "dot", "size": 6, "title": "Columna 17"}, {"color": "aqua", "id": "Facturacion_rips_PacienteNombre", "label": "PacienteNombre", "shape": "dot", "size": 6, "title": "Columna 18"}, {"color": "aqua", "id": "Facturacion_rips_PacienteNit", "label": "PacienteNit", "shape": "dot", "size": 6, "title": "Columna 19"}, {"color": "aqua", "id": "Facturacion_rips_PacienteCodigo", "label": "PacienteCodigo", "shape": "dot", "size": 6, "title": "Columna 20"}, {"color": "aqua", "id": "Facturacion_rips_PacienteFechaNac", "label": "PacienteFechaNac", "shape": "dot", "size": 6, "title": "Columna 21"}, {"color": "aqua", "id": "Facturacion_rips_Tipo", "label": "Tipo", "shape": "dot", "size": 6, "title": "Columna 22"}, {"color": "aqua", "id": "Facturacion_rips_TotFac", "label": "TotFac", "shape": "dot", "size": 6, "title": "Columna 23"}, {"color": "aqua", "id": "Facturacion_rips_UsuarioNombre", "label": "UsuarioNombre", "shape": "dot", "size": 6, "title": "Columna 24"}, {"color": "aqua", "id": "Facturacion_rips_CamaCodigo", "label": "CamaCodigo", "shape": "dot", "size": 6, "title": "Columna 25"}, {"color": "aqua", "id": "Facturacion_rips_CamaNombre", "label": "CamaNombre", "shape": "dot", "size": 6, "title": "Columna 26"}, {"color": "aqua", "id": "Facturacion_rips_TipoContrato", "label": "TipoContrato", "shape": "dot", "size": 6, "title": "Columna 27"}, {"color": "aqua", "id": "Facturacion_rips_TipoPlan", "label": "TipoPlan", "shape": "dot", "size": 6, "title": "Columna 28"}, {"color": "aqua", "id": "Facturacion_rips_TipoIngreso", "label": "TipoIngreso", "shape": "dot", "size": 6, "title": "Columna 29"}, {"color": "aqua", "id": "Facturacion_rips_OidFactura", "label": "OidFactura", "shape": "dot", "size": 6, "title": "Columna 30"}, {"color": "aqua", "id": "Facturacion_rips_ServicioCodigo", "label": "ServicioCodigo", "shape": "dot", "size": 6, "title": "Columna 31"}, {"color": "aqua", "id": "Facturacion_rips_ServicioNombre", "label": "ServicioNombre", "shape": "dot", "size": 6, "title": "Columna 32"}, {"color": "aqua", "id": "Facturacion_rips_Cantidad", "label": "Cantidad", "shape": "dot", "size": 6, "title": "Columna 33"}, {"color": "aqua", "id": "Facturacion_rips_FechaServicio", "label": "FechaServicio", "shape": "dot", "size": 6, "title": "Columna 34"}, {"color": "aqua", "id": "Facturacion_rips_GrupoSerCodigo", "label": "GrupoSerCodigo", "shape": "dot", "size": 6, "title": "Columna 35"}, {"color": "aqua", "id": "Facturacion_rips_GrupoSerNombre", "label": "GrupoSerNombre", "shape": "dot", "size": 6, "title": "Columna 36"}, {"color": "aqua", "id": "Facturacion_rips_SubgrupoCodigo", "label": "SubgrupoCodigo", "shape": "dot", "size": 6, "title": "Columna 37"}, {"color": "aqua", "id": "Facturacion_rips_SubgrupoNombre", "label": "SubgrupoNombre", "shape": "dot", "size": 6, "title": "Columna 38"}, {"color": "aqua", "id": "Facturacion_rips_MedicoCodigo", "label": "MedicoCodigo", "shape": "dot", "size": 6, "title": "Columna 39"}, {"color": "aqua", "id": "Facturacion_rips_MedicoNombre", "label": "MedicoNombre", "shape": "dot", "size": 6, "title": "Columna 40"}, {"color": "aqua", "id": "Facturacion_rips_CentroCosCodigo", "label": "CentroCosCodigo", "shape": "dot", "size": 6, "title": "Columna 41"}, {"color": "aqua", "id": "Facturacion_rips_CentroCosNombre", "label": "CentroCosNombre", "shape": "dot", "size": 6, "title": "Columna 42"}, {"color": "aqua", "id": "Facturacion_rips_AreaCodigo", "label": "AreaCodigo", "shape": "dot", "size": 6, "title": "Columna 43"}, {"color": "aqua", "id": "Facturacion_rips_AreaNombre", "label": "AreaNombre", "shape": "dot", "size": 6, "title": "Columna 44"}, {"color": "aqua", "id": "Facturacion_rips_GrupoQuiCodigo", "label": "GrupoQuiCodigo", "shape": "dot", "size": 6, "title": "Columna 45"}, {"color": "aqua", "id": "Facturacion_rips_GrupoQuiNombre", "label": "GrupoQuiNombre", "shape": "dot", "size": 6, "title": "Columna 46"}, {"color": "aqua", "id": "Facturacion_rips_ValPac", "label": "ValPac", "shape": "dot", "size": 6, "title": "Columna 47"}, {"color": "aqua", "id": "Facturacion_rips_ValEnt", "label": "ValEnt", "shape": "dot", "size": 6, "title": "Columna 48"}, {"color": "aqua", "id": "Facturacion_rips_TotSer", "label": "TotSer", "shape": "dot", "size": 6, "title": "Columna 49"}, {"color": "aqua", "id": "Facturacion_rips_IngresoPor", "label": "IngresoPor", "shape": "dot", "size": 6, "title": "Columna 50"}, {"color": "aqua", "id": "Facturacion_rips_FechaIngreso", "label": "FechaIngreso", "shape": "dot", "size": 6, "title": "Columna 51"}, {"color": "aqua", "id": "Facturacion_rips_FechaEgreso", "label": "FechaEgreso", "shape": "dot", "size": 6, "title": "Columna 52"}, {"color": "aqua", "id": "Facturacion_rips_DiagIngrCod", "label": "DiagIngrCod", "shape": "dot", "size": 6, "title": "Columna 53"}, {"color": "aqua", "id": "Facturacion_rips_DiagIngrNom", "label": "DiagIngrNom", "shape": "dot", "size": 6, "title": "Columna 54"}, {"color": "aqua", "id": "Facturacion_rips_DiagEgreCod", "label": "DiagEgreCod", "shape": "dot", "size": 6, "title": "Columna 55"}, {"color": "aqua", "id": "Facturacion_rips_DiagEgreNom", "label": "DiagEgreNom", "shape": "dot", "size": 6, "title": "Columna 56"}, {"color": "aqua", "id": "Facturacion_rips_DiagMuerCod", "label": "DiagMuerCod", "shape": "dot", "size": 6, "title": "Columna 57"}, {"color": "aqua", "id": "Facturacion_rips_DiagMuerNom", "label": "DiagMuerNom", "shape": "dot", "size": 6, "title": "Columna 58"}, {"color": "aqua", "id": "Facturacion_rips_EspeTratCod", "label": "EspeTratCod", "shape": "dot", "size": 6, "title": "Columna 59"}, {"color": "aqua", "id": "Facturacion_rips_EspeTratNom", "label": "EspeTratNom", "shape": "dot", "size": 6, "title": "Columna 60"}, {"color": "aqua", "id": "Facturacion_total_CENTRO", "label": "CENTRO", "shape": "dot", "size": 3, "title": "Columna 1"}, {"color": "aqua", "id": "Facturacion_total_FACTURA", "label": "FACTURA", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Facturacion_total_FECHA_FACT", "label": "FECHA_FACT", "shape": "dot", "size": 3, "title": "Columna 3"}, {"color": "aqua", "id": "Facturacion_total_TIPO_FACTURA", "label": "TIPO_FACTURA", "shape": "dot", "size": 3, "title": "Columna 4"}, {"color": "aqua", "id": "Facturacion_total_INGRESO", "label": "INGRESO", "shape": "dot", "size": 3, "title": "Columna 5"}, {"color": "aqua", "id": "Facturacion_total_FEC_INGRESO", "label": "FEC_INGRESO", "shape": "dot", "size": 3, "title": "Columna 6"}, {"color": "aqua", "id": "Facturacion_total_COD_USU_FACTURADOR", "label": "COD_USU_FACTURADOR", "shape": "dot", "size": 3, "title": "Columna 7"}, {"color": "aqua", "id": "Facturacion_total_NOM_FACTURADOR", "label": "NOM_FACTURADOR", "shape": "dot", "size": 3, "title": "Columna 8"}, {"color": "aqua", "id": "Facturacion_total_DOC_PACIENTE", "label": "DOC_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 9"}, {"color": "aqua", "id": "Facturacion_total_PACTIPDOC", "label": "PACTIPDOC", "shape": "dot", "size": 3, "title": "Columna 10"}, {"color": "aqua", "id": "Facturacion_total_TIPO_DOC", "label": "TIPO_DOC", "shape": "dot", "size": 6, "title": "Columna 11"}, {"color": "aqua", "id": "Facturacion_total_ESTADO_PAC", "label": "ESTADO_PAC", "shape": "dot", "size": 3, "title": "Columna 12"}, {"color": "aqua", "id": "Facturacion_total_NOMBRE_PACIENTE", "label": "NOMBRE_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 13"}, {"color": "aqua", "id": "Facturacion_total_COD_PACIENTE", "label": "COD_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 14"}, {"color": "aqua", "id": "Facturacion_total_FEC_NACIMIENTO", "label": "FEC_NACIMIENTO", "shape": "dot", "size": 3, "title": "Columna 15"}, {"color": "aqua", "id": "Facturacion_total_GENERO", "label": "GENERO", "shape": "dot", "size": 6, "title": "Columna 16"}, {"color": "aqua", "id": "Facturacion_total_EDAD", "label": "EDAD", "shape": "dot", "size": 6, "title": "Columna 17"}, {"color": "aqua", "id": "Facturacion_total_ESTRATO", "label": "ESTRATO", "shape": "dot", "size": 3, "title": "Columna 18"}, {"color": "aqua", "id": "Facturacion_total_NOM_ESTRATO", "label": "NOM_ESTRATO", "shape": "dot", "size": 3, "title": "Columna 19"}, {"color": "aqua", "id": "Facturacion_total_VALOR_ENTIDAD", "label": "VALOR_ENTIDAD", "shape": "dot", "size": 3, "title": "Columna 20"}, {"color": "aqua", "id": "Facturacion_total_VALOR_PACIENTE", "label": "VALOR_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 21"}, {"color": "aqua", "id": "Facturacion_total_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 3, "title": "Columna 22"}, {"color": "aqua", "id": "Facturacion_total_CUMS", "label": "CUMS", "shape": "dot", "size": 6, "title": "Columna 23"}, {"color": "aqua", "id": "Facturacion_total_PRODUCTO", "label": "PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 24"}, {"color": "aqua", "id": "bases_norte_documento", "label": "documento", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "bases_norte", "label": "bases_norte", "shape": "dot", "size": 6, "title": "Archivo externo bases norte"}, {"color": "aqua", "id": "bases_norte_ips", "label": "ips", "shape": "dot", "size": 6, "title": "Columna 2"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Facturacion_total_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_FEC_SERVICIO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_CANT_SERVICIO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_VALOR_UNITARIO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_VALOR_TOTAL", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_COD_PLAN", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_PLAN", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_COD_MEDICO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_MEDICO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_CENTRO_DE_COSTO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_SIPCODCUP", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_COD_ENTIDAD1", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_ENTIDAD1", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NUM_EGRESO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_CODIGO_CUMS", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_GMETIPMED", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_AMBITO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_ADEFECSAL", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "capital_sendas_NOMBRE_PACIENTE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FECHA_NACIMIENTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FECHA_NACIMIENTO", "title": "CALCULA_A", "to": "capital_sendas_EDAD_1"}, {"arrows": "to", "from": "capital_sendas_FECHA_NACIMIENTO", "title": "CALCULA_A", "to": "capital_sendas_EDAD_2"}, {"arrows": "to", "from": "capital_sendas_EDAD_1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD_2", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CALCULA_A", "to": "capital_sendas_EDAD_1"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CALCULA_A", "to": "capital_sendas_EDAD_2"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_GRUPO_QX"}, {"arrows": "to", "from": "Condicion_igual_servicio_2", "title": "CUMPLE", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Condicion_igual_cups", "title": "CUMPLE", "to": "capital_sendas_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_NOMBRE_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CONCEPTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CONCEPTO", "title": "CALCULA_A", "to": "Regla_egreso"}, {"arrows": "to", "from": "Regla_egreso", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_GRUPO_QX", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GRUPO_QX", "title": "CALCULA_A", "to": "Regla_quirofano"}, {"arrows": "to", "from": "Regla_quirofano", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TIPOLOGIA_NOMBRE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ips", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_validacion", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Condicion_igual_factura", "title": "CUMPLE", "to": "capital_sendas_TIPO_DOC"}, {"arrows": "to", "from": "Condicion_igual_factura", "title": "CUMPLE", "to": "capital_sendas_GENERO"}, {"arrows": "to", "from": "Condicion_igual_factura", "title": "CUMPLE", "to": "capital_sendas_EDAD"}, {"arrows": "to", "from": "Condicion_igual_factura", "title": "CUMPLE", "to": "capital_sendas_CUMS"}, {"arrows": "to", "from": "capital_sendas_TIPO_DOC", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TIPO_DOC", "title": "COPIADO_A", "to": "capital_sendas_TIPO_DOC_"}, {"arrows": "to", "from": "capital_sendas_GENERO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GENERO", "title": "CALCULA_A", "to": "capital_sendas_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_EDAD", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD", "title": "CALCULA_A", "to": "capital_sendas_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_CUMS", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "COPIADO_A", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO_QX", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO_QX", "title": "COPIADO_A", "to": "capital_sendas_GRUPO_QX"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "Anexos_SERVICIO", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_OBSERVACIONES", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA_NOMBRE", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA_NOMBRE", "title": "COPIADO_A", "to": "capital_sendas_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "Anexos_CODIGOS_ANEXOS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TARIFA_CONTRATADA", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "COPIADO_A", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_nombre_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "capital_sendas_TipoDocumento", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_NumeroFactura", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_NumeroFactura", "title": "CUMPLE", "to": "Condicion_igual_factura"}, {"arrows": "to", "from": "capital_sendas_NumeroFactura", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_NumeroFactura", "title": "AGRUPADO", "to": "Regla_egreso"}, {"arrows": "to", "from": "capital_sendas_FechaFactura", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TotalFactura", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValorCuotaRecuperacion", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValorPagare", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValorFranquicia", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValorReciboCaja", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValorAnticipo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_Refacturada", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_NumeroIngreso", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PlanCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PlanNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CentroCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CentroNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ContratoNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ContratoNit", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PacienteNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PacienteNombre", "title": "COPIADO_A", "to": "capital_sendas_NOMBRE_PACIENTE"}, {"arrows": "to", "from": "capital_sendas_PacienteNit", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PacienteNit", "title": "COPIADO_A", "to": "capital_sendas_DOC_PACIENTE_"}, {"arrows": "to", "from": "capital_sendas_PacienteNit", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE_", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Condicion_igual_documento", "title": "CUMPLE", "to": "capital_sendas_ips"}, {"arrows": "to", "from": "capital_sendas_PacienteCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PacienteFechaNac", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_PacienteFechaNac", "title": "COPIADO_A", "to": "capital_sendas_FECHA_NACIMIENTO"}, {"arrows": "to", "from": "capital_sendas_Tipo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TotFac", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_UsuarioNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CamaCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CamaNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TipoContrato", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TipoPlan", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TipoIngreso", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_OidFactura", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ServicioCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ServicioCodigo", "title": "COPIADO_A", "to": "capital_sendas_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_ServicioNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ServicioNombre", "title": "COPIADO_A", "to": "capital_sendas_NOMBRE_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_Cantidad", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FechaServicio", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FechaServicio", "title": "COPIADO_A", "to": "capital_sendas_FEC_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_FechaServicio", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_GrupoSerCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GrupoSerNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_SubgrupoCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_SubgrupoNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_MedicoCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_MedicoNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CentroCosCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CentroCosNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_AreaCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_AreaNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GrupoQuiCodigo", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GrupoQuiNombre", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValPac", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ValEnt", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TotSer", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_IngresoPor", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_IngresoPor", "title": "COPIADO_A", "to": "capital_sendas_AMBITO"}, {"arrows": "to", "from": "capital_sendas_AMBITO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FechaIngreso", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FechaEgreso", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FechaEgreso", "title": "COPIADO_A", "to": "capital_sendas_FechaEgreso_"}, {"arrows": "to", "from": "capital_sendas_FechaEgreso_", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagIngrCod", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagIngrNom", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagEgreCod", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagEgreNom", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagMuerCod", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DiagMuerNom", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EspeTratCod", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EspeTratNom", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TIPO_DOC_", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Facturacion_rips_TipoDocumento", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TipoDocumento", "title": "COPIADO_A", "to": "capital_sendas_TipoDocumento"}, {"arrows": "to", "from": "Facturacion_rips_NumeroFactura", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_NumeroFactura", "title": "COPIADO_A", "to": "capital_sendas_NumeroFactura"}, {"arrows": "to", "from": "Facturacion_rips_FechaFactura", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_FechaFactura", "title": "COPIADO_A", "to": "capital_sendas_FechaFactura"}, {"arrows": "to", "from": "Facturacion_rips_TotalFactura", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TotalFactura", "title": "COPIADO_A", "to": "capital_sendas_TotalFactura"}, {"arrows": "to", "from": "Facturacion_rips_ValorCuotaRecuperacion", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValorCuotaRecuperacion", "title": "COPIADO_A", "to": "capital_sendas_ValorCuotaRecuperacion"}, {"arrows": "to", "from": "Facturacion_rips_ValorPagare", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValorPagare", "title": "COPIADO_A", "to": "capital_sendas_ValorPagare"}, {"arrows": "to", "from": "Facturacion_rips_ValorFranquicia", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValorFranquicia", "title": "COPIADO_A", "to": "capital_sendas_ValorFranquicia"}, {"arrows": "to", "from": "Facturacion_rips_ValorReciboCaja", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValorReciboCaja", "title": "COPIADO_A", "to": "capital_sendas_ValorReciboCaja"}, {"arrows": "to", "from": "Facturacion_rips_ValorAnticipo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValorAnticipo", "title": "COPIADO_A", "to": "capital_sendas_ValorAnticipo"}, {"arrows": "to", "from": "Facturacion_rips_Refacturada", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_Refacturada", "title": "COPIADO_A", "to": "capital_sendas_Refacturada"}, {"arrows": "to", "from": "Facturacion_rips_NumeroIngreso", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_NumeroIngreso", "title": "COPIADO_A", "to": "capital_sendas_NumeroIngreso"}, {"arrows": "to", "from": "Facturacion_rips_PlanCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PlanCodigo", "title": "COPIADO_A", "to": "capital_sendas_PlanCodigo"}, {"arrows": "to", "from": "Facturacion_rips_PlanNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PlanNombre", "title": "COPIADO_A", "to": "capital_sendas_PlanNombre"}, {"arrows": "to", "from": "Facturacion_rips_CentroCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CentroCodigo", "title": "COPIADO_A", "to": "capital_sendas_CentroCodigo"}, {"arrows": "to", "from": "Facturacion_rips_CentroNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CentroNombre", "title": "COPIADO_A", "to": "capital_sendas_CentroNombre"}, {"arrows": "to", "from": "Facturacion_rips_ContratoNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ContratoNombre", "title": "COPIADO_A", "to": "capital_sendas_ContratoNombre"}, {"arrows": "to", "from": "Facturacion_rips_ContratoNit", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ContratoNit", "title": "COPIADO_A", "to": "capital_sendas_ContratoNit"}, {"arrows": "to", "from": "Facturacion_rips_PacienteNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PacienteNombre", "title": "COPIADO_A", "to": "capital_sendas_PacienteNombre"}, {"arrows": "to", "from": "Facturacion_rips_PacienteNit", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PacienteNit", "title": "COPIADO_A", "to": "capital_sendas_PacienteNit"}, {"arrows": "to", "from": "Facturacion_rips_PacienteCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PacienteCodigo", "title": "COPIADO_A", "to": "capital_sendas_PacienteCodigo"}, {"arrows": "to", "from": "Facturacion_rips_PacienteFechaNac", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_PacienteFechaNac", "title": "COPIADO_A", "to": "capital_sendas_PacienteFechaNac"}, {"arrows": "to", "from": "Facturacion_rips_Tipo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_Tipo", "title": "COPIADO_A", "to": "capital_sendas_Tipo"}, {"arrows": "to", "from": "Facturacion_rips_TotFac", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TotFac", "title": "COPIADO_A", "to": "capital_sendas_TotFac"}, {"arrows": "to", "from": "Facturacion_rips_UsuarioNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_UsuarioNombre", "title": "COPIADO_A", "to": "capital_sendas_UsuarioNombre"}, {"arrows": "to", "from": "Facturacion_rips_CamaCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CamaCodigo", "title": "COPIADO_A", "to": "capital_sendas_CamaCodigo"}, {"arrows": "to", "from": "Facturacion_rips_CamaNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CamaNombre", "title": "COPIADO_A", "to": "capital_sendas_CamaNombre"}, {"arrows": "to", "from": "Facturacion_rips_TipoContrato", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TipoContrato", "title": "COPIADO_A", "to": "capital_sendas_TipoContrato"}, {"arrows": "to", "from": "Facturacion_rips_TipoPlan", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TipoPlan", "title": "COPIADO_A", "to": "capital_sendas_TipoPlan"}, {"arrows": "to", "from": "Facturacion_rips_TipoIngreso", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TipoIngreso", "title": "COPIADO_A", "to": "capital_sendas_TipoIngreso"}, {"arrows": "to", "from": "Facturacion_rips_OidFactura", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_OidFactura", "title": "COPIADO_A", "to": "capital_sendas_OidFactura"}, {"arrows": "to", "from": "Facturacion_rips_ServicioCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ServicioCodigo", "title": "COPIADO_A", "to": "capital_sendas_ServicioCodigo"}, {"arrows": "to", "from": "Facturacion_rips_ServicioNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ServicioNombre", "title": "COPIADO_A", "to": "capital_sendas_ServicioNombre"}, {"arrows": "to", "from": "Facturacion_rips_Cantidad", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_Cantidad", "title": "COPIADO_A", "to": "capital_sendas_Cantidad"}, {"arrows": "to", "from": "Facturacion_rips_FechaServicio", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_FechaServicio", "title": "COPIADO_A", "to": "capital_sendas_FechaServicio"}, {"arrows": "to", "from": "Facturacion_rips_GrupoSerCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_GrupoSerCodigo", "title": "COPIADO_A", "to": "capital_sendas_GrupoSerCodigo"}, {"arrows": "to", "from": "Facturacion_rips_GrupoSerNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_GrupoSerNombre", "title": "COPIADO_A", "to": "capital_sendas_GrupoSerNombre"}, {"arrows": "to", "from": "Facturacion_rips_SubgrupoCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_SubgrupoCodigo", "title": "COPIADO_A", "to": "capital_sendas_SubgrupoCodigo"}, {"arrows": "to", "from": "Facturacion_rips_SubgrupoNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_SubgrupoNombre", "title": "COPIADO_A", "to": "capital_sendas_SubgrupoNombre"}, {"arrows": "to", "from": "Facturacion_rips_MedicoCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_MedicoCodigo", "title": "COPIADO_A", "to": "capital_sendas_MedicoCodigo"}, {"arrows": "to", "from": "Facturacion_rips_MedicoNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_MedicoNombre", "title": "COPIADO_A", "to": "capital_sendas_MedicoNombre"}, {"arrows": "to", "from": "Facturacion_rips_CentroCosCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CentroCosCodigo", "title": "COPIADO_A", "to": "capital_sendas_CentroCosCodigo"}, {"arrows": "to", "from": "Facturacion_rips_CentroCosNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_CentroCosNombre", "title": "COPIADO_A", "to": "capital_sendas_CentroCosNombre"}, {"arrows": "to", "from": "Facturacion_rips_AreaCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_AreaCodigo", "title": "COPIADO_A", "to": "capital_sendas_AreaCodigo"}, {"arrows": "to", "from": "Facturacion_rips_AreaNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_AreaNombre", "title": "COPIADO_A", "to": "capital_sendas_AreaNombre"}, {"arrows": "to", "from": "Facturacion_rips_GrupoQuiCodigo", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_GrupoQuiCodigo", "title": "COPIADO_A", "to": "capital_sendas_GrupoQuiCodigo"}, {"arrows": "to", "from": "Facturacion_rips_GrupoQuiNombre", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_GrupoQuiNombre", "title": "COPIADO_A", "to": "capital_sendas_GrupoQuiNombre"}, {"arrows": "to", "from": "Facturacion_rips_ValPac", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValPac", "title": "COPIADO_A", "to": "capital_sendas_ValPac"}, {"arrows": "to", "from": "Facturacion_rips_ValEnt", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_ValEnt", "title": "COPIADO_A", "to": "capital_sendas_ValEnt"}, {"arrows": "to", "from": "Facturacion_rips_TotSer", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_TotSer", "title": "COPIADO_A", "to": "capital_sendas_TotSer"}, {"arrows": "to", "from": "Facturacion_rips_IngresoPor", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_IngresoPor", "title": "COPIADO_A", "to": "capital_sendas_IngresoPor"}, {"arrows": "to", "from": "Facturacion_rips_FechaIngreso", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_FechaIngreso", "title": "COPIADO_A", "to": "capital_sendas_FechaIngreso"}, {"arrows": "to", "from": "Facturacion_rips_FechaEgreso", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_FechaEgreso", "title": "COPIADO_A", "to": "capital_sendas_FechaEgreso"}, {"arrows": "to", "from": "Facturacion_rips_DiagIngrCod", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagIngrCod", "title": "COPIADO_A", "to": "capital_sendas_DiagIngrCod"}, {"arrows": "to", "from": "Facturacion_rips_DiagIngrNom", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagIngrNom", "title": "COPIADO_A", "to": "capital_sendas_DiagIngrNom"}, {"arrows": "to", "from": "Facturacion_rips_DiagEgreCod", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagEgreCod", "title": "COPIADO_A", "to": "capital_sendas_DiagEgreCod"}, {"arrows": "to", "from": "Facturacion_rips_DiagEgreNom", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagEgreNom", "title": "COPIADO_A", "to": "capital_sendas_DiagEgreNom"}, {"arrows": "to", "from": "Facturacion_rips_DiagMuerCod", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagMuerCod", "title": "COPIADO_A", "to": "capital_sendas_DiagMuerCod"}, {"arrows": "to", "from": "Facturacion_rips_DiagMuerNom", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_DiagMuerNom", "title": "COPIADO_A", "to": "capital_sendas_DiagMuerNom"}, {"arrows": "to", "from": "Facturacion_rips_EspeTratCod", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_EspeTratCod", "title": "COPIADO_A", "to": "capital_sendas_EspeTratCod"}, {"arrows": "to", "from": "Facturacion_rips_EspeTratNom", "title": "CAMPO_DE", "to": "Facturacion_rips"}, {"arrows": "to", "from": "Facturacion_rips_EspeTratNom", "title": "COPIADO_A", "to": "capital_sendas_EspeTratNom"}, {"arrows": "to", "from": "Facturacion_total_CENTRO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_FACTURA", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_FACTURA", "title": "CUMPLE", "to": "Condicion_igual_factura"}, {"arrows": "to", "from": "Facturacion_total_FECHA_FACT", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_TIPO_FACTURA", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_INGRESO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_FEC_INGRESO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_COD_USU_FACTURADOR", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_FACTURADOR", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_DOC_PACIENTE", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_PACTIPDOC", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_TIPO_DOC", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_TIPO_DOC", "title": "COPIADO_A", "to": "capital_sendas_TIPO_DOC"}, {"arrows": "to", "from": "Facturacion_total_ESTADO_PAC", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOMBRE_PACIENTE", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_COD_PACIENTE", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_FEC_NACIMIENTO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_GENERO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_GENERO", "title": "COPIADO_A", "to": "capital_sendas_GENERO"}, {"arrows": "to", "from": "Facturacion_total_EDAD", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_EDAD", "title": "COPIADO_A", "to": "capital_sendas_EDAD"}, {"arrows": "to", "from": "Facturacion_total_ESTRATO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_NOM_ESTRATO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_VALOR_ENTIDAD", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_VALOR_PACIENTE", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_SERVICIO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_CUMS", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "Facturacion_total_CUMS", "title": "COPIADO_A", "to": "capital_sendas_CUMS"}, {"arrows": "to", "from": "Facturacion_total_PRODUCTO", "title": "CAMPO_DE", "to": "Facturacion_total"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "bases_norte_ips", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "bases_norte_ips", "title": "COPIADO_A", "to": "capital_sendas_ips"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"shape": "dot", "font": {"size": 12}}, "edges": {"arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, "interaction": {"hover": true, "zoomView": true}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
