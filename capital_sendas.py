@@ -1,5 +1,14 @@
-# Capital Sendas
-#### Se procesan los reportes de DGH "facturacion_total.xlsx", "facturacion_rips.xlsx" y "bases_norte.xlsx" generando como resultado el archivo "Capital_sendas.xlsx"
+"""
+Capital Sendas
+
+Este script procesa los reportes de DGH "facturacion_total.xlsx", "facturacion_rips.xlsx" y "bases_norte.xlsx" para generar el archivo "Capital_sendas.xlsx".
+
+Pasos del proceso:
+1. Carga de archivos.
+2. Procesamiento de datos.
+3. Aplicación de reglas de validación.
+4. Descarga de archivos resultantes.
+"""
 
 # %% Cargar archivos
 
@@ -12,13 +21,23 @@ import requests
 import duckdb
 import os
 
-print('Cargando archivos')
+print('Cargando archivos...')
 # Conectar a DuckDB y cargar los xlsx a df
 con = duckdb.connect()
 con.sql("INSTALL spatial; LOAD spatial;")
 
 # Función descargaExcel para descargar los excel compartidos en OneDrive 365
 def descargaExcel(url):
+    """
+    Descarga un archivo Excel desde una URL de OneDrive 365 y lo carga en un DataFrame.
+    
+    Args:
+    - url (str): URL del archivo Excel en OneDrive 365.
+    
+    Returns:
+    - df (DataFrame): DataFrame con los datos del archivo Excel descargado.
+    """
+
     # Reemplazar la parte después del ? con download=1
     url = url.split('?')[0] + '?download=1'
 
@@ -42,32 +61,35 @@ def descargaExcel(url):
         return False
 
 # Cargar Codigos consultas de OneDrive
-print('-Códigos')
+print('- Cargando Códigos')
 dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcLsPJKWhwxIoljSAm24vB8BouYTCUF1__tXxPVwDn44aA?e=WNkZxt")
 
-# Cargar Anexos Capital Salud unificados 2023 de de OneDrive
-print('-Anexos')
+# Cargar Anexos Capital Salud unificados 2023 de OneDrive
+print('- Cargando Anexos')
 dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EdjY3dEvXXFHod9G_nNByAYBiNlxWKem41zHWM1y2vM3Cw")
 
 # Cargar Codigo tipologia de de OneDrive
-print('-Tipologia')
+print('- Cargando Tipologia')
 dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
 # Cargar Facturacion rips
-print('-facturacion_rips.xlsx')
+print('- Cargando facturacion_rips.xlsx')
 dfFacRips = con.query("SELECT * FROM st_read('facturacion_rips.xlsx')").df()
 # Cargar de Facturación total solo las columnas y los valores únicos necesarios
-print('-facturacion_total.xlsx')
+print('- Cargando facturacion_total.xlsx')
 dfFacTotal = con.query("SELECT DISTINCT FACTURA as NumeroFactura, TIPO_DOC, GENERO, EDAD, CUMS FROM st_read('facturacion_total.xlsx')").df()
 # Cargar Bases norte
-print('-bases_norte.xlsx')
+print('- Cargando bases_norte.xlsx')
 dfBases = con.query("SELECT * FROM st_read('bases_norte.xlsx')").df()
 
 # %% Procesar datos
-print('Procesando datos')
+print('Procesando datos...')
 
 # Crear dfCapital_sendas cruzando dfFacRips y dfFacTotal con 'NumeroFactura' y seleccionando solo la primera aparición
-dfCapital_sendas = pd.merge(dfFacRips, dfFacTotal.drop_duplicates(subset='NumeroFactura', keep='first'), on=['NumeroFactura'], how='left')
+dfCapital_sendas = pd.merge(
+    dfFacRips,
+    dfFacTotal.drop_duplicates(subset='NumeroFactura', keep='first'),
+    on=['NumeroFactura'], how='left')
 
 # Repetir columnas de dfCapital_sendas
 
@@ -85,23 +107,34 @@ dfCapital_sendas['NOMBRE_SERVICIO'] = dfCapital_sendas['ServicioNombre']
 # Agregar columnas de dfCodigos a dfCapital_sendas
 
 # Agregar columnas 'CONCEPTO' y 'GRUPO QX' de dfCodigos a dfCapital_sendas cruzando con 'SERVICIO'
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfCodigos[['SERVICIO', 'CONCEPTO', 'GRUPO QX']].drop_duplicates(), on=['SERVICIO'], how='left')
+dfCapital_sendas = pd.merge(
+    dfCapital_sendas,
+    dfCodigos[['SERVICIO', 'CONCEPTO', 'GRUPO QX']].drop_duplicates(),
+    on=['SERVICIO'], how='left')
 
 # Calcular columnas de dfCapital_sendas
 
 # Agregar otras columnas a dfCapital_sendas
-dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
-dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
+dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(
+    lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
+dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(
+    lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
 
 # Agregar columna de dfTipologia a dfCapital_sendas
 
 # Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas cruzando con 'SERVICIO'
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfTipologia[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'), on=['SERVICIO'], how='left')
+dfCapital_sendas = pd.merge(
+    dfCapital_sendas,
+    dfTipologia[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'),
+    on=['SERVICIO'], how='left')
 
 # Agregar columnas de dfAnexos a dfCapital_sendas
 
 # Crea dfTemporal cruzando dfCapital_sendas y dfAnexos
-dfTemporal = pd.merge(dfCapital_sendas[['GENERO', 'EDAD', 'SERVICIO']].drop_duplicates(), dfAnexos[['CUPS', 'TIPOLOGIA NOMBRE']].drop_duplicates(), left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
+dfTemporal = pd.merge(
+    dfCapital_sendas[['GENERO', 'EDAD', 'SERVICIO']].drop_duplicates(),
+    dfAnexos[['CUPS', 'TIPOLOGIA NOMBRE']].drop_duplicates(),
+    left_on=['SERVICIO'], right_on=['CUPS'], how='left').drop(columns=['CUPS'])
 
 # Asegúrate de que no haya NaN en 'TIPOLOGIA NOMBRE'
 dfTemporal['TIPOLOGIA NOMBRE'] = dfTemporal['TIPOLOGIA NOMBRE'].fillna('')
@@ -120,6 +153,16 @@ dfTemporal = dfTemporal.sort_values(by=['SERVICIO', 'GENERO', 'EDAD', 'Contiene'
 # si no entonces identifica la primera fila cuyo valor de 'TIPOLOGIA NOMBRE' no contenga las palabras 'PEDIATRIA' o 'GINECOLOGIA'
 # y asignar ese valor de 'TIPOLOGIA NOMBRE' de lo contrario asignar ''
 def asignar_tipologia(row):
+    """
+    Asigna la tipología según las reglas especificadas.
+    
+    Args:
+    - row (Series): Fila del DataFrame dfTemporal.
+    
+    Returns:
+    - tipologia (str): Valor de la tipología asignada.
+    """
+
     # Filtrar por 'PEDIATRIA' y 'EDAD' < 14
     if 'PEDIATRIA' in row['TIPOLOGIA NOMBRE'] and row['EDAD'] < 14:
         return row['TIPOLOGIA NOMBRE']
@@ -145,18 +188,34 @@ dfTemporal = dfTemporal[dfTemporal['Valida'] != '']
 dfTemporal = dfTemporal.groupby(['GENERO', 'EDAD', 'SERVICIO']).first().reset_index()
 
 # Agregar columna 'TIPOLOGIA' de dfTemporal a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS'
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfTemporal[['GENERO', 'EDAD', 'SERVICIO', 'TIPOLOGIA NOMBRE']], on=['GENERO', 'EDAD', 'SERVICIO'], how='left')
+dfCapital_sendas = pd.merge(
+    dfCapital_sendas,
+    dfTemporal[['GENERO', 'EDAD', 'SERVICIO', 'TIPOLOGIA NOMBRE']],
+    on=['GENERO', 'EDAD', 'SERVICIO'], how='left')
 
 # Agregar columnas de dfBases a dfCapital_sendas
 
 # Agregar columna 'ips' de dfBases a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS' y seleccionando solo la primera aparición
-dfCapital_sendas = pd.merge(dfCapital_sendas, dfBases.drop_duplicates(subset='documento', keep='first'), left_on=['PacienteNit'], right_on=['documento'], how='left').drop(columns=['documento'])
+dfCapital_sendas = pd.merge(
+    dfCapital_sendas,
+    dfBases.drop_duplicates(subset='documento', keep='first'), left_on=['PacienteNit'],
+    right_on=['documento'], how='left').drop(columns=['documento'])
 
 # Agregar columna 'PacienteNit' de dfCapital_sendas a dfComprobar cuando no tiene 'ips'
 dfComprobar = dfCapital_sendas[dfCapital_sendas['ips'].isna()][['PacienteNit', 'UsuarioNombre']].drop_duplicates()
 
 # Funcion para separar nombres y apellidos
 def separar_nombres(nombre_completo):
+    """
+    Separa un nombre completo en nombres y apellidos.
+    
+    Parámetros:
+    - nombre_completo (str): Nombre completo a separar.
+    
+    Retorna:
+    - tuple: Tupla con los nombres y apellidos separados.
+    """
+
     # Separa los nombres en partes
     partes_ini = nombre_completo.split()
     partes = []
@@ -197,7 +256,9 @@ dfCapital_sendas['validacion'] = 0
 # Regla Quirófano
 
 # De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
-dfTemporal = dfCapital_sendas[dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][['NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
+dfTemporal = dfCapital_sendas[
+    dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][[
+        'NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
 
 # De 'FechaServicio' extraer solo la fecha sin la hora
 dfTemporal['FechaServicio'] = dfTemporal['FechaServicio'].dt.date
@@ -209,6 +270,16 @@ dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO
 #  ≤ 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1
 #  > 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
 def validacion_Qx(grupo):
+    """
+    Aplica la regla de validación para quirófanos.
+    
+    Args:
+    - grupo (DataFrame): Grupo de registros con la misma 'NumeroFactura' y 'FechaServicio'.
+    
+    Returns:
+    - grupo (DataFrame): Grupo de registros con la columna 'validacion' actualizada.
+    """
+
     # Si hay más de 3 registros        
     # Inicializa contadores
     actualizados = 0
@@ -234,7 +305,8 @@ def validacion_Qx(grupo):
     return grupo
 
 # Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
-dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(level= ['NumeroFactura', 'FechaServicio'], drop=True)
+dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(
+    level= ['NumeroFactura', 'FechaServicio'], drop=True)
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
@@ -242,7 +314,9 @@ dfCapital_sendas.update(dfTemporal[['validacion']])
 # Regla Egreso
 
 # De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
-dfTemporal = dfCapital_sendas[dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][['NumeroFactura', 'CONCEPTO', 'validacion']]
+dfTemporal = dfCapital_sendas[
+    dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][[
+        'NumeroFactura', 'CONCEPTO', 'validacion']]
 
 # Eliminar duplicados de 'NumeroFactura' y 'CONCEPTO'
 dfTemporal = dfTemporal.drop_duplicates(subset=['NumeroFactura', 'CONCEPTO'], keep='first')
