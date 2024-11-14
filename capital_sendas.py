@@ -369,7 +369,7 @@ dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['Cantidad']
 
 # %% Descargar los archivos
-print('Descargando archivos')
+print('Descargando archivos...')
 
 # Convertir las columnas tipo fecha/hora a solo fecha en texto
 dfCapital_sendas['FechaFactura'] = dfCapital_sendas['FechaFactura'].dt.strftime('%Y/%m/%d')
