@@ -139,7 +139,7 @@ dfTemporal = pd.merge(
 # Asegúrate de que no haya NaN en 'TIPOLOGIA NOMBRE'
 dfTemporal['TIPOLOGIA NOMBRE'] = dfTemporal['TIPOLOGIA NOMBRE'].fillna('')
 
-# Agregar la columna 'Contiene' con el valor 1 si 'TIPOLOGIA NOMBRE' contiene 'PEDIATRIA' o 'GINECOLOGIA', de lo contrario 1
+# Agregar la columna 'Contiene' con el valor 1 si 'TIPOLOGIA NOMBRE' contiene 'PEDIATRIA' o 'GINECOLOGIA', de lo contrario 2
 dfTemporal['Contiene'] = np.where(dfTemporal['TIPOLOGIA NOMBRE'].str.contains('PEDIATRIA|GINECOLOGIA', case=False, na=False), 1, 2)
 
 # Ordenar por 'SERVICIO', 'GENERO', 'EDAD' y 'Contiene'
@@ -185,7 +185,7 @@ dfTemporal['Valida'] = dfTemporal.apply(asignar_tipologia, axis=1)
 dfTemporal = dfTemporal[dfTemporal['Valida'] != '']
 
 # Dejar solo la primera fila para cada grupo 'GENERO', 'EDAD', 'SERVICIO'
-dfTemporal = dfTemporal.groupby(['GENERO', 'EDAD', 'SERVICIO']).first().reset_index()
+dfTemporal = dfTemporal.groupby(['GENERO', 'EDAD', 'SERVICIO'], dropna=False).first().reset_index()
 
 # Agregar columna 'TIPOLOGIA' de dfTemporal a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS'
 dfCapital_sendas = pd.merge(
@@ -305,8 +305,10 @@ def validacion_Qx(grupo):
     return grupo
 
 # Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
-dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(
-    level= ['NumeroFactura', 'FechaServicio'], drop=True)
+#dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(
+#    level = ['NumeroFactura', 'FechaServicio'], drop=True)
+dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx, include_groups=False).reset_index(
+    level = ['NumeroFactura', 'FechaServicio'], drop=False)
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
@@ -326,6 +328,45 @@ dfTemporal['validacion'] = 1
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
+
+# Regla Ambulatorio
+
+# Para tipologia C1
+# De dfCapital_sendas filtrar por 'PlanCodigo' los que comiencen por PGP y seleccionar las columnas 'PacienteNit', 'FechaServicio' y crear dfTemporal
+dfTemporal = dfCapital_sendas[
+    (dfCapital_sendas['tipologia'] == 'C1') & 
+    (dfCapital_sendas['PlanCodigo'].fillna('').str.startswith('PGP'))][[
+        'PacienteNit', 'FechaServicio']]
+
+# Eliminar duplicados de 'PacienteNit' y 'FechaServicio'
+dfTemporal = dfTemporal.drop_duplicates(subset=['PacienteNit', 'FechaServicio'], keep='first')
+
+# Actualizar 'validacion' a 1
+dfTemporal['validacion'] = 1
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
+dfCapital_sendas.update(dfTemporal[['validacion']])
+
+# Para tipologia C4
+# De dfCapital_sendas 'validacion' es 1 para todos excepto para 'ServicioCodigo' con valor 890502
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'C4') & 
+    (dfCapital_sendas['ServicioCodigo'] != '890502'), 'validacion'] = 1
+
+# De dfCapital_sendas para 'ServicioCodigo' con valor 890502, 'validacion' es igual al valor de 'Cantidad'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'C4') & 
+    (dfCapital_sendas['ServicioCodigo'] == '890502'), 'validacion'] = dfCapital_sendas['Cantidad']
+
+# Para tipologia C7
+# De dfCapital_sendas 'validacion' es igual al valor de 'Cantidad'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'C7'), 'validacion'] = dfCapital_sendas['Cantidad']
+
+# Para tipologia C8
+# De dfCapital_sendas 'validacion' es igual al valor de 'Cantidad'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['Cantidad']
 
 # %% Descargar los archivos
 print('Descargando archivos')
