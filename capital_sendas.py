@@ -1,7 +1,7 @@
 """
 Capital Sendas
 
-Este script procesa los reportes de DGH "facturacion_total.xlsx", "facturacion_rips.xlsx" y "bases_norte.xlsx" para generar el archivo "Capital_sendas.xlsx".
+Este script procesa los reportes de DGH "produccion_AAAAMMDD_AAAAMMDD.xlsx", "bases_norte.xlsx" para generar el archivo "Capital_sendas.xlsx".
 
 Pasos del proceso:
 1. Carga de archivos.
@@ -72,37 +72,59 @@ dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/perso
 print('- Cargando Tipologia')
 dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
 
-# Cargar Facturacion rips
-print('- Cargando facturacion_rips.xlsx')
-dfFacRips = con.query("SELECT * FROM st_read('facturacion_rips.xlsx')").df()
-# Cargar de Facturación total solo las columnas y los valores únicos necesarios
-print('- Cargando facturacion_total.xlsx')
-dfFacTotal = con.query("SELECT DISTINCT FACTURA as NumeroFactura, TIPO_DOC, GENERO, EDAD, CUMS FROM st_read('facturacion_total.xlsx')").df()
 # Cargar Bases norte
-print('- Cargando bases_norte.xlsx')
-dfBases = con.query("SELECT * FROM st_read('bases_norte.xlsx')").df()
+print('- Cargando bases_norte')
+dfBases = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EXBZ0Ym5E1lJpRDK6W48trMBFbExvI0oO7Us7EhWa2ph4g?e=EZcGQn")
+
+# listar los archivos en el directorio actual que comiencen con "produccion" y terminen con ".xlsx"
+archivos = [f for f in os.listdir('.') if f.startswith('produccion') and f.endswith('.xlsx')]
+# Convertir la lista de archivos en un dataframe
+dfArchivos = pd.DataFrame(archivos, columns=['Archivo'])
+# Separar la columna 'Archivo' usando '_' como separador, y solo guardar la columna 2 en 'Fecha'
+dfArchivos['AnoMes'] = dfArchivos['Archivo'].str.split('_').str[1].str[:6]
+# Filtrar el dataframe para quedarse solo con la fila que tiene la el valor máximo en la columna 'AnoMes'
+dfArchivos = dfArchivos[dfArchivos['AnoMes'] == dfArchivos['AnoMes'].max()]
+
+# Cagar los archivos excel de la columna 'Archivo' en dfCapital_sendas
+# Si hay más de un archivo, concatenarlos en un solo dataframe
+# La primera fila de cada archivo es el encabezado
+print('- Cargando Producción')
+dfCapital_sendas = pd.DataFrame()
+for archivo in dfArchivos['Archivo']:
+    dfTemp = con.query(f"SELECT * FROM st_read('{archivo}')").df()
+    # la primera fila es el encabezado
+    dfTemp.columns = dfTemp.iloc[0]
+    dfTemp = dfTemp[1:]
+    # Concatenar los dataframes
+    dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
+
+# Cargar Facturacion rips
+#print('- Cargando facturacion_rips.xlsx')
+#dfFacRips = con.query("SELECT * FROM st_read('facturacion_rips.xlsx')").df()
+# Cargar de Facturación total solo las columnas y los valores únicos necesarios
+#print('- Cargando facturacion_total.xlsx')
+#dfFacTotal = con.query("SELECT DISTINCT FACTURA as FACTURA, TIPO_DOC, GENERO, EDAD, CUMS FROM st_read('facturacion_total.xlsx')").df()
+# Cargar Bases norte
+#print('- Cargando bases_norte.xlsx')
+#dfBases = con.query("SELECT * FROM st_read('bases_norte.xlsx')").df()
 
 # %% Procesar datos
 print('Procesando datos...')
 
-# Crear dfCapital_sendas cruzando dfFacRips y dfFacTotal con 'NumeroFactura' y seleccionando solo la primera aparición
-dfCapital_sendas = pd.merge(
-    dfFacRips,
-    dfFacTotal.drop_duplicates(subset='NumeroFactura', keep='first'),
-    on=['NumeroFactura'], how='left')
+# Crear dfCapital_sendas cruzando dfFacRips y dfFacTotal con 'FACTURA' y seleccionando solo la primera aparición
+#dfCapital_sendas = pd.merge(
+#    dfFacRips,
+#    dfFacTotal.drop_duplicates(subset='FACTURA', keep='first'),
+#    on=['FACTURA'], how='left')
 
-# Repetir columnas de dfCapital_sendas
+# Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a tipo fecha
+dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 15), format='%a %b %d %Y')
+dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 15), format='%a %b %d %Y')
+dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 15), format='%a %b %d %Y')
 
-# Agregar otras columnas a dfCapital_sendas
-dfCapital_sendas['AMBITO'] = dfCapital_sendas['IngresoPor']
-dfCapital_sendas['FechaEgreso_'] = dfCapital_sendas['FechaEgreso']
-dfCapital_sendas['TIPO_DOC_'] = dfCapital_sendas['TIPO_DOC']
-dfCapital_sendas['DOC_PACIENTE_'] = dfCapital_sendas['PacienteNit']
-dfCapital_sendas['NOMBRE_PACIENTE'] = dfCapital_sendas['PacienteNombre']
-dfCapital_sendas['FECHA_NACIMIENTO'] = dfCapital_sendas['PacienteFechaNac']
-dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FechaServicio']
-dfCapital_sendas['SERVICIO'] = dfCapital_sendas['ServicioCodigo']
-dfCapital_sendas['NOMBRE_SERVICIO'] = dfCapital_sendas['ServicioNombre']
+# Convertir 'EDAD' y 'CANT_SERVICIO' a entero
+dfCapital_sendas['EDAD'] = dfCapital_sendas['EDAD'].astype(int)
+dfCapital_sendas['CANT_SERVICIO'] = pd.to_numeric(dfCapital_sendas['CANT_SERVICIO'], errors='coerce').fillna(0).astype(int)
 
 # Agregar columnas de dfCodigos a dfCapital_sendas
 
@@ -115,9 +137,9 @@ dfCapital_sendas = pd.merge(
 # Calcular columnas de dfCapital_sendas
 
 # Agregar otras columnas a dfCapital_sendas
-dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(
+dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FEC_NACIMIENTO']).apply(
     lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
-dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FECHA_NACIMIENTO']).apply(
+dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FEC_NACIMIENTO']).apply(
     lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
 
 # Agregar columna de dfTipologia a dfCapital_sendas
@@ -198,11 +220,11 @@ dfCapital_sendas = pd.merge(
 # Agregar columna 'ips' de dfBases a dfCapital_sendas cruzando con 'SERVICIO' y 'CUPS' y seleccionando solo la primera aparición
 dfCapital_sendas = pd.merge(
     dfCapital_sendas,
-    dfBases.drop_duplicates(subset='documento', keep='first'), left_on=['PacienteNit'],
+    dfBases.drop_duplicates(subset='documento', keep='first'), left_on=['DOC_PACIENTE'],
     right_on=['documento'], how='left').drop(columns=['documento'])
 
-# Agregar columna 'PacienteNit' de dfCapital_sendas a dfComprobar cuando no tiene 'ips'
-dfComprobar = dfCapital_sendas[dfCapital_sendas['ips'].isna()][['PacienteNit', 'UsuarioNombre']].drop_duplicates()
+# Agregar columna 'DOC_PACIENTE' de dfCapital_sendas a dfComprobar cuando no tiene 'ips'
+dfComprobar = dfCapital_sendas[dfCapital_sendas['ips'].isna()][['DOC_PACIENTE', 'NOMBRE_PACIENTE']].drop_duplicates()
 
 # Funcion para separar nombres y apellidos
 def separar_nombres(nombre_completo):
@@ -243,10 +265,10 @@ def separar_nombres(nombre_completo):
         return partes[0], '', '', ''  # Caso de un solo nombre
 
 # Aplicar la función para separar nombres y apellidos
-dfComprobar[['nombre1', 'nombre2', 'apellido1', 'apellido2']] = dfComprobar['UsuarioNombre'].apply(separar_nombres).apply(pd.Series)
+dfComprobar[['nombre1', 'nombre2', 'apellido1', 'apellido2']] = dfComprobar['NOMBRE_PACIENTE'].astype(str).apply(separar_nombres).apply(pd.Series)
 
-# Eliminar la columna 'UsuarioNombre'
-dfComprobar = dfComprobar.drop(columns=['UsuarioNombre'])
+# Eliminar la columna 'NOMBRE_PACIENTE'
+dfComprobar = dfComprobar.drop(columns=['NOMBRE_PACIENTE'])
 
 # %% Reglas
 
@@ -255,26 +277,26 @@ dfCapital_sendas['validacion'] = 0
 
 # Regla Quirófano
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][[
-        'NumeroFactura', 'FechaServicio', 'GRUPO QX', 'validacion']]
+        'FACTURA', 'FEC_SERVICIO', 'GRUPO QX', 'validacion']]
 
-# De 'FechaServicio' extraer solo la fecha sin la hora
-dfTemporal['FechaServicio'] = dfTemporal['FechaServicio'].dt.date
+# De 'FEC_SERVICIO' extraer solo la fecha sin la hora
+dfTemporal['FEC_SERVICIO'] = dfTemporal['FEC_SERVICIO'].dt.date
 
-# Ordenar dfTemporal por 'NumeroFactura', 'FechaServicio' ascendentes y por 'GRUPO QX' descendente
-dfTemporal = dfTemporal.sort_values(by=['NumeroFactura', 'FechaServicio', 'GRUPO QX'], ascending=[True, True, False])
+# Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
+dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'FEC_SERVICIO', 'GRUPO QX'], ascending=[True, True, False])
 
 # Función validacion_Qx
-#  ≤ 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1
-#  > 3 registros en la misma 'NumeroFactura', 'FechaServicio', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
+#  ≤ 3 registros en la misma 'FACTURA', 'FEC_SERVICIO', colocar 'validacion' = 1
+#  > 3 registros en la misma 'FACTURA', 'FEC_SERVICIO', colocar 'validacion' = 1 para los 2 registros del mayor 'GRUPO QX' y 1 del siguiente mayor 'GRUPO QX'
 def validacion_Qx(grupo):
     """
     Aplica la regla de validación para quirófanos.
     
     Args:
-    - grupo (DataFrame): Grupo de registros con la misma 'NumeroFactura' y 'FechaServicio'.
+    - grupo (DataFrame): Grupo de registros con la misma 'FACTURA' y 'FEC_SERVICIO'.
     
     Returns:
     - grupo (DataFrame): Grupo de registros con la columna 'validacion' actualizada.
@@ -304,24 +326,22 @@ def validacion_Qx(grupo):
                 grupo_qx = fila['GRUPO QX']                
     return grupo
 
-# Aplicar la función validacion_Qx a cada grupo 'NumeroFactura', 'FechaServicio' de dfTemporal
-#dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx).reset_index(
-#    level = ['NumeroFactura', 'FechaServicio'], drop=True)
-dfTemporal = dfTemporal.groupby(['NumeroFactura', 'FechaServicio']).apply(validacion_Qx, include_groups=False).reset_index(
-    level = ['NumeroFactura', 'FechaServicio'], drop=False)
+# Aplicar la función validacion_Qx a cada grupo 'FACTURA', 'FEC_SERVICIO' de dfTemporal
+dfTemporal = dfTemporal.groupby(['FACTURA', 'FEC_SERVICIO']).apply(validacion_Qx, include_groups=False).reset_index(
+    level = ['FACTURA', 'FEC_SERVICIO'], drop=False)
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
 # Regla Egreso
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'NumeroFactura', 'FechaServicio', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][[
-        'NumeroFactura', 'CONCEPTO', 'validacion']]
+        'FACTURA', 'CONCEPTO', 'validacion']]
 
-# Eliminar duplicados de 'NumeroFactura' y 'CONCEPTO'
-dfTemporal = dfTemporal.drop_duplicates(subset=['NumeroFactura', 'CONCEPTO'], keep='first')
+# Eliminar duplicados de 'FACTURA' y 'CONCEPTO'
+dfTemporal = dfTemporal.drop_duplicates(subset=['FACTURA', 'CONCEPTO'], keep='first')
 
 # Actualizar 'validacion' a 1
 dfTemporal['validacion'] = 1
@@ -332,14 +352,14 @@ dfCapital_sendas.update(dfTemporal[['validacion']])
 # Regla Ambulatorio
 
 # Para tipologia C1
-# De dfCapital_sendas filtrar por 'PlanCodigo' los que comiencen por PGP y seleccionar las columnas 'PacienteNit', 'FechaServicio' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'COD_PLAN' los que comiencen por PGP y seleccionar las columnas 'DOC_PACIENTE', 'FEC_SERVICIO' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     (dfCapital_sendas['tipologia'] == 'C1') & 
-    (dfCapital_sendas['PlanCodigo'].fillna('').str.startswith('PGP'))][[
-        'PacienteNit', 'FechaServicio']]
+    (dfCapital_sendas['COD_PLAN'].fillna('').str.startswith('PGP'))][[
+        'DOC_PACIENTE', 'FEC_SERVICIO']]
 
-# Eliminar duplicados de 'PacienteNit' y 'FechaServicio'
-dfTemporal = dfTemporal.drop_duplicates(subset=['PacienteNit', 'FechaServicio'], keep='first')
+# Eliminar duplicados de 'DOC_PACIENTE' y 'FEC_SERVICIO'
+dfTemporal = dfTemporal.drop_duplicates(subset=['DOC_PACIENTE', 'FEC_SERVICIO'], keep='first')
 
 # Actualizar 'validacion' a 1
 dfTemporal['validacion'] = 1
@@ -348,40 +368,55 @@ dfTemporal['validacion'] = 1
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
 # Para tipologia C4
-# De dfCapital_sendas 'validacion' es 1 para todos excepto para 'ServicioCodigo' con valor 890502
+# De dfCapital_sendas 'validacion' es 1 para todos excepto para 'SERVICIO' con valor 890502
 dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C4') & 
-    (dfCapital_sendas['ServicioCodigo'] != '890502'), 'validacion'] = 1
+    (dfCapital_sendas['SERVICIO'] != '890502'), 'validacion'] = 1
 
-# De dfCapital_sendas para 'ServicioCodigo' con valor 890502, 'validacion' es igual al valor de 'Cantidad'
+# De dfCapital_sendas para 'SERVICIO' con valor 890502, 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C4') & 
-    (dfCapital_sendas['ServicioCodigo'] == '890502'), 'validacion'] = dfCapital_sendas['Cantidad']
+    (dfCapital_sendas['SERVICIO'] == '890502'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
 
 # Para tipologia C7
-# De dfCapital_sendas 'validacion' es igual al valor de 'Cantidad'
+# De dfCapital_sendas 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
-    (dfCapital_sendas['tipologia'] == 'C7'), 'validacion'] = dfCapital_sendas['Cantidad']
+    (dfCapital_sendas['tipologia'] == 'C7'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
 
 # Para tipologia C8
-# De dfCapital_sendas 'validacion' es igual al valor de 'Cantidad'
+# De dfCapital_sendas 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
-    (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['Cantidad']
+    (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
 
 # %% Descargar los archivos
 print('Descargando archivos...')
 
 # Convertir las columnas tipo fecha/hora a solo fecha en texto
-dfCapital_sendas['FechaFactura'] = dfCapital_sendas['FechaFactura'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['PacienteFechaNac'] = dfCapital_sendas['PacienteFechaNac'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['FechaServicio'] = dfCapital_sendas['FechaServicio'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['FechaIngreso'] = dfCapital_sendas['FechaIngreso'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['FechaEgreso'] = dfCapital_sendas['FechaEgreso'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['FechaEgreso_'] = dfCapital_sendas['FechaEgreso_'].dt.strftime('%Y/%m/%d')
+dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.strftime('%Y/%m/%d')
+dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.strftime('%Y/%m/%d')
+
+# Columnas
+Columnas = ['CENTRO','FACTURA','FECHA_FACT','TIPO_FACTURA','INGRESO','FEC_INGRESO','COD_USU_FACTURADOR','NOM_FACTURADOR','DOC_PACIENTE','PACTIPDOC',
+            'TIPO_DOC','ESTADO_PAC','NOMBRE_PACIENTE','COD_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD','ESTRATO','NOM_ESTRATO','VALOR_ENTIDAD',
+            'VALOR_PACIENTE','SERVICIO','CUMS','PRODUCTO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','VALOR_UNITARIO','VALOR_TOTAL','COD_PLAN',
+            'NOM_PLAN','COD_MEDICO','NOM_MEDICO','CENTRO_DE_COSTO','NOM_CENTROCOS','SIPCODCUP','COD_ENTIDAD1','NOM_ENTIDAD1','NUM_EGRESO','CODIGO_CUMS',
+            'GMETIPMED','SFATIPDOC','AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1','FechaIngreso','CONCEPTO','GRUPO QX','EDAD 1','EDAD 2',
+            'tipologia','TIPOLOGIA NOMBRE','ips','validacion']
+# Columnas a publicar
+Columnas = ['CENTRO','FACTURA','FECHA_FACT',
+            'GENERO',
+            'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','COD_PLAN',
+            'NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1',
+            'AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1','CONCEPTO','GRUPO QX','EDAD 1','EDAD 2',
+            'tipologia','TIPOLOGIA NOMBRE','ips','validacion']
+
+# Seleccionar las columnas
+dfCapital_sendas = dfCapital_sendas[Columnas]
 
 # Convertir los df a xlsx
 print('-capital_sendas.xlsx')
 con.execute("COPY (SELECT * FROM dfCapital_sendas) TO 'capital_sendas.xlsx' WITH (FORMAT GDAL, DRIVER 'xlsx');")
+#con.execute("COPY (SELECT * FROM dfCapital_sendas) TO 'capital_sendas.csv' (HEADER, DELIMITER '|');")
 con.execute("COPY (SELECT * FROM dfComprobar) TO 'comprobar.csv' WITH (HEADER, DELIMITER ',');")
 
 # %%
