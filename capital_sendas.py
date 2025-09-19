@@ -91,10 +91,16 @@ dfArchivos = dfArchivos[dfArchivos['AnoMes'] == dfArchivos['AnoMes'].max()]
 print('- Cargando Producción')
 dfCapital_sendas = pd.DataFrame()
 for archivo in dfArchivos['Archivo']:
+    print('- -', archivo)
     dfTemp = con.query(f"SELECT * FROM st_read('{archivo}')").df()
     # la primera fila es el encabezado
     dfTemp.columns = dfTemp.iloc[0]
     dfTemp = dfTemp[1:]
+    # Seleccionar las columnas necesarias
+    dfTemp = dfTemp[['SEDE_NOMBRE','FACTURA','FECHA_FACT','DOC_PACIENTE','NOMBRE_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD',
+                     'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO',
+                     'COD_PLAN','NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1','AMBITO',
+                     'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
     # Concatenar los dataframes
     dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
 
@@ -396,14 +402,14 @@ dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.strftime('%Y/
 dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.strftime('%Y/%m/%d')
 
 # Columnas
-Columnas = ['CENTRO','FACTURA','FECHA_FACT','TIPO_FACTURA','INGRESO','FEC_INGRESO','COD_USU_FACTURADOR','NOM_FACTURADOR','DOC_PACIENTE','PACTIPDOC',
-            'TIPO_DOC','ESTADO_PAC','NOMBRE_PACIENTE','COD_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD','ESTRATO','NOM_ESTRATO','VALOR_ENTIDAD',
-            'VALOR_PACIENTE','SERVICIO','CUMS','PRODUCTO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','VALOR_UNITARIO','VALOR_TOTAL','COD_PLAN',
-            'NOM_PLAN','COD_MEDICO','NOM_MEDICO','CENTRO_DE_COSTO','NOM_CENTROCOS','SIPCODCUP','COD_ENTIDAD1','NOM_ENTIDAD1','NUM_EGRESO','CODIGO_CUMS',
-            'GMETIPMED','SFATIPDOC','AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1','FechaIngreso','CONCEPTO','GRUPO QX','EDAD 1','EDAD 2',
-            'tipologia','TIPOLOGIA NOMBRE','ips','validacion']
+Columnas = ['SEDE','SEDE_NOMBRE','FACTURA','FECHA_FACT','TIPO_FACTURA','INGRESO','FEC_INGRESO','COD_USU_FACTURADOR','NOM_FACTURADOR','DOC_PACIENTE',
+            'PACTIPDOC','TIPO_DOC','ESTADO_PAC','NOMBRE_PACIENTE','COD_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD','ESTRATO','NOM_ESTRATO',
+            'VALOR_ENTIDAD','VALOR_PACIENTE','SERVICIO','CUMS','PRODUCTO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','VALOR_UNITARIO','VALOR_TOTAL',
+            'COD_PLAN','NOM_PLAN','COD_MEDICO','NOM_MEDICO','CENTRO_DE_COSTO','NOM_CENTROCOS','SIPCODCUP','COD_ENTIDAD1','NOM_ENTIDAD1','NUM_EGRESO',
+            'CODIGO_CUMS','GMETIPMED','SFATIPDOC','PRODUCTO_SERVICIO','AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1','CONCEPTO','GRUPO QX','EDAD 1',
+            'EDAD 2','tipologia','TIPOLOGIA NOMBRE','ips','validacion']
 # Columnas a publicar
-Columnas = ['CENTRO','FACTURA','FECHA_FACT',
+Columnas = ['SEDE_NOMBRE','FACTURA','FECHA_FACT',
             'GENERO',
             'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','COD_PLAN',
             'NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1',
@@ -417,6 +423,7 @@ dfCapital_sendas = dfCapital_sendas[Columnas]
 print('-capital_sendas.xlsx')
 con.execute("COPY (SELECT * FROM dfCapital_sendas) TO 'capital_sendas.xlsx' WITH (FORMAT GDAL, DRIVER 'xlsx');")
 #con.execute("COPY (SELECT * FROM dfCapital_sendas) TO 'capital_sendas.csv' (HEADER, DELIMITER '|');")
+print('-comprobar.csv')
 con.execute("COPY (SELECT * FROM dfComprobar) TO 'comprobar.csv' WITH (HEADER, DELIMITER ',');")
 
 # %%
