@@ -101,6 +101,8 @@ for archivo in dfArchivos['Archivo']:
                      'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO',
                      'COD_PLAN','NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1','AMBITO',
                      'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
+    # Seleccionar las filas donde 'NOM_PLAN' contiene 'PGP'
+    dfTemp = dfTemp[dfTemp['NOM_PLAN'].str.contains('PGP', na=False)]
     # Concatenar los dataframes
     dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
 
