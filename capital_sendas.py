@@ -80,10 +80,12 @@ dfBases = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/person
 archivos = [f for f in os.listdir('.') if f.startswith('produccion') and f.endswith('.xlsx')]
 # Convertir la lista de archivos en un dataframe
 dfArchivos = pd.DataFrame(archivos, columns=['Archivo'])
-# Separar la columna 'Archivo' usando '_' como separador, y solo guardar la columna 2 en 'Fecha'
+# Separar la columna 'Archivo' usando '_' como separador, y solo guardar la columna 2 en 'AnoMes'
 dfArchivos['AnoMes'] = dfArchivos['Archivo'].str.split('_').str[1].str[:6]
 # Filtrar el dataframe para quedarse solo con la fila que tiene la el valor máximo en la columna 'AnoMes'
 dfArchivos = dfArchivos[dfArchivos['AnoMes'] == dfArchivos['AnoMes'].max()]
+# Seleccionar los ultimos 2 digitos de 'AnoMes' y guardarlos en la variable 'Mes' como entero   
+Mes = int(dfArchivos['AnoMes'].str[-2:].max())
 
 # Cagar los archivos excel de la columna 'Archivo' en dfCapital_sendas
 # Si hay más de un archivo, concatenarlos en un solo dataframe
@@ -103,8 +105,13 @@ for archivo in dfArchivos['Archivo']:
                      'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
     # Seleccionar las filas donde 'NOM_PLAN' contiene 'PGP'
     dfTemp = dfTemp[dfTemp['NOM_PLAN'].str.contains('PGP', na=False)]
+    # seleecionar las filas donde 'FACTURA' no comienza por 'NS'
+    dfTemp = dfTemp[~dfTemp['FACTURA'].str.startswith('SN', na=False)]
     # Concatenar los dataframes
     dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
+
+# seleccionar las filas unicas
+dfCapital_sendas = dfCapital_sendas.drop_duplicates()
 
 # Cargar Facturacion rips
 #print('- Cargando facturacion_rips.xlsx')
@@ -129,6 +136,9 @@ print('Procesando datos...')
 dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 15), format='%a %b %d %Y')
 dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 15), format='%a %b %d %Y')
 dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 15), format='%a %b %d %Y')
+
+# Seleccionar el mes de 'FECHA_FACT' igual a la variable 'Mes'
+dfCapital_sendas = dfCapital_sendas[dfCapital_sendas['FECHA_FACT'].dt.month == Mes]
 
 # Convertir 'EDAD' y 'CANT_SERVICIO' a entero
 dfCapital_sendas['EDAD'] = dfCapital_sendas['EDAD'].astype(int)
