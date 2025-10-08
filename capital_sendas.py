@@ -353,7 +353,7 @@ dfCapital_sendas.update(dfTemporal[['validacion']])
 
 # Regla Egreso
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'CONCEPTO' que comience por ('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL') y seleccionar las columnas 'FACTURA', 'CONCEPTO' y 'validacion' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][[
         'FACTURA', 'CONCEPTO', 'validacion']]
@@ -386,15 +386,32 @@ dfTemporal['validacion'] = 1
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
 # Para tipologia C4
-# De dfCapital_sendas 'validacion' es 1 para todos excepto para 'SERVICIO' con valor 890502
+# De dfCapital_sendas 'validacion' es 1 para todos con 'AMBITO' con valor 'CONSULTA EXTERNA' excepto para 'SERVICIO' con valor 890502
 dfCapital_sendas.loc[
+    (dfCapital_sendas['AMBITO'] == 'CONSULTA EXTERNA') &
     (dfCapital_sendas['tipologia'] == 'C4') & 
     (dfCapital_sendas['SERVICIO'] != '890502'), 'validacion'] = 1
 
 # De dfCapital_sendas para 'SERVICIO' con valor 890502, 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
+    (dfCapital_sendas['AMBITO'] == 'CONSULTA EXTERNA') &
     (dfCapital_sendas['tipologia'] == 'C4') & 
     (dfCapital_sendas['SERVICIO'] == '890502'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
+
+# Identificar las facturas que contienen el servicio '132P01'
+facturas_con_132P01 = dfCapital_sendas[dfCapital_sendas['SERVICIO'] == '132P01']['FACTURA'].unique()
+
+# Definir los servicios a los que se les aplicará la validación '0'
+servicios_a_invalidar = ('890285', '890385', '890384', '890284', '890502')
+
+# Si la Factura está en facturas_con_132P01 Y la tipologia es 'C4' con 'AMBITO' con valor 'CONSULTA EXTERNA'
+# Y el SERVICIO es uno de los servicios_a_invalidar, establecer 'validacion' a 0.
+dfCapital_sendas.loc[
+    (dfCapital_sendas['AMBITO'] == 'CONSULTA EXTERNA') &
+    (dfCapital_sendas['tipologia'] == 'C4') & 
+    (dfCapital_sendas['FACTURA'].isin(facturas_con_132P01)) &
+    (dfCapital_sendas['SERVICIO'].isin(servicios_a_invalidar)), 'validacion'] = 0
+
 
 # Para tipologia C7
 # De dfCapital_sendas 'validacion' es igual al valor de 'CANT_SERVICIO'
@@ -402,8 +419,9 @@ dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C7'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
 
 # Para tipologia C8
-# De dfCapital_sendas 'validacion' es igual al valor de 'CANT_SERVICIO'
+# De dfCapital_sendas con 'AMBITO' con valor 'CONSULTA EXTERNA' entonces 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
+    (dfCapital_sendas['AMBITO'] == 'CONSULTA EXTERNA') &
     (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
 
 # %% Descargar los archivos
