@@ -99,7 +99,7 @@ for archivo in dfArchivos['Archivo']:
     dfTemp.columns = dfTemp.iloc[0]
     dfTemp = dfTemp[1:]
     # Seleccionar las columnas necesarias
-    dfTemp = dfTemp[['SEDE_NOMBRE','FACTURA','FECHA_FACT','DOC_PACIENTE','NOMBRE_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD',
+    dfTemp = dfTemp[['SEDE_NOMBRE','FACTURA','FECHA_FACT','INGRESO','DOC_PACIENTE','NOMBRE_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD',
                      'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO',
                      'COD_PLAN','NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1','AMBITO',
                      'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
@@ -439,7 +439,7 @@ Columnas = ['SEDE','SEDE_NOMBRE','FACTURA','FECHA_FACT','TIPO_FACTURA','INGRESO'
             'CODIGO_CUMS','GMETIPMED','SFATIPDOC','PRODUCTO_SERVICIO','AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1','CONCEPTO','GRUPO QX','EDAD 1',
             'EDAD 2','tipologia','TIPOLOGIA NOMBRE','ips','validacion']
 # Columnas a publicar
-Columnas = ['SEDE_NOMBRE','FACTURA','FECHA_FACT',
+Columnas = ['SEDE_NOMBRE','FACTURA','FECHA_FACT','INGRESO',
             'GENERO',
             'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','COD_PLAN',
             'NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1',
