@@ -84,6 +84,8 @@ dfArchivos = pd.DataFrame(archivos, columns=['Archivo'])
 dfArchivos['AnoMes'] = dfArchivos['Archivo'].str.split('_').str[1].str[:6]
 # Filtrar el dataframe para quedarse solo con la fila que tiene la el valor máximo en la columna 'AnoMes'
 dfArchivos = dfArchivos[dfArchivos['AnoMes'] == dfArchivos['AnoMes'].max()]
+# Ordenar el dataframe por 'Archivo' descendente
+dfArchivos = dfArchivos.sort_values(by='Archivo', ascending=False).reset_index(drop=True)
 # Seleccionar los ultimos 2 digitos de 'AnoMes' y guardarlos en la variable 'Mes' como entero   
 Mes = int(dfArchivos['AnoMes'].str[-2:].max())
 
@@ -107,21 +109,20 @@ for archivo in dfArchivos['Archivo']:
     dfTemp = dfTemp[dfTemp['NOM_PLAN'].str.contains('PGP', na=False)]
     # seleecionar las filas donde 'FACTURA' no comienza por 'NS'
     dfTemp = dfTemp[~dfTemp['FACTURA'].str.startswith('SN', na=False)]
+    # Eliminar filas de dfTemp que ya están en dfCapital_sendas
+    # Se usa merge para realizar un "anti-join" basado en TODAS las columnas
+    if not dfCapital_sendas.empty:
+        # Se realiza un merge 'left' para obtener todas las filas de dfTemp.
+        # El argumento 'indicator=True' crea una columna especial '_merge'.
+        dfMerged = dfTemp.merge(dfCapital_sendas, 
+                                how='left', 
+                                on=dfTemp.columns.tolist(), # Se usa TODAS las columnas como claves de unión
+                                indicator=True)
+        # El anti-join selecciona solo las filas que solo existen en el lado izquierdo (dfTemp).
+        # Estas son las que tienen el valor 'left_only' en la columna '_merge'.
+        dfTemp = dfMerged[dfMerged['_merge'] == 'left_only'].drop(columns=['_merge'])
     # Concatenar los dataframes
     dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
-
-# seleccionar las filas unicas
-dfCapital_sendas = dfCapital_sendas.drop_duplicates()
-
-# Cargar Facturacion rips
-#print('- Cargando facturacion_rips.xlsx')
-#dfFacRips = con.query("SELECT * FROM st_read('facturacion_rips.xlsx')").df()
-# Cargar de Facturación total solo las columnas y los valores únicos necesarios
-#print('- Cargando facturacion_total.xlsx')
-#dfFacTotal = con.query("SELECT DISTINCT FACTURA as FACTURA, TIPO_DOC, GENERO, EDAD, CUMS FROM st_read('facturacion_total.xlsx')").df()
-# Cargar Bases norte
-#print('- Cargando bases_norte.xlsx')
-#dfBases = con.query("SELECT * FROM st_read('bases_norte.xlsx')").df()
 
 # %% Procesar datos
 print('Procesando datos...')
