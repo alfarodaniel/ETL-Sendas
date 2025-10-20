@@ -413,7 +413,6 @@ dfCapital_sendas.loc[
     (dfCapital_sendas['FACTURA'].isin(facturas_con_132P01)) &
     (dfCapital_sendas['SERVICIO'].isin(servicios_a_invalidar)), 'validacion'] = 0
 
-
 # Para tipologia C7
 # De dfCapital_sendas 'validacion' es igual al valor de 'CANT_SERVICIO'
 dfCapital_sendas.loc[
@@ -424,6 +423,82 @@ dfCapital_sendas.loc[
 dfCapital_sendas.loc[
     (dfCapital_sendas['AMBITO'] == 'CONSULTA EXTERNA') &
     (dfCapital_sendas['tipologia'] == 'C8'), 'validacion'] = dfCapital_sendas['CANT_SERVICIO']
+
+
+# Regla Hospital día
+
+# De dfCapital_sendas 'validacion' es igual a 1 cuando tipologia es 'HD'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'HD'), 'validacion'] = 1
+
+
+# Regla Atención renal integral
+
+# De dfCapital_sendas 'validacion' es igual a 1 cuando tipologia es 'ARI'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'ARI'), 'validacion'] = 1
+
+
+# Regla Consultorio urgencias
+
+# De dfCapital_sendas 'validacion' es igual a 1 cuando tipologia es 'C5'
+dfCapital_sendas.loc[
+    (dfCapital_sendas['tipologia'] == 'C5'), 'validacion'] = 0
+
+
+# De dfCapital_sendas filtrar por 'tipologia' igual a C5 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'validacion' y crear dfTemporal
+dfTemporal = dfCapital_sendas[
+    dfCapital_sendas['tipologia'] == 'C5'][[
+        'FACTURA', 'DX_PRINCIPAL.1', 'FEC_SERVICIO', 'validacion']]
+
+# Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
+dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'DX_PRINCIPAL.1', 'FEC_SERVICIO'])
+
+# Convertir FECHA a datetime
+dfTemporal['FEC_SERVICIO'] = pd.to_datetime(dfTemporal['FEC_SERVICIO'], errors='coerce')
+
+
+# Función validacion_C5
+# Misma 'FACTURA' y 'DX_PRINCIPAL.1' > 3 dias de diferencia de 'FEC_SERVICIO', colocar 'validacion' = 1
+def validacion_C5(grupo):
+    """
+    Aplica la regla de validación para C5 Consultorio urgencias.
+    
+    Args:
+    - grupo (DataFrame): Grupo de registros con la misma 'FACTURA', 'DX_PRINCIPAL.1' ordenados por 'FEC_SERVICIO'.
+    
+    Returns:
+    - grupo (DataFrame): Grupo de registros con la columna 'validacion' actualizada.
+    """
+
+    if len(grupo) == 0:
+        return grupo
+    
+    ultima_fecha_marcada = None
+    
+    # Valida cada registro
+    for indice, fila in grupo.iterrows():
+        # Marcar si es el primer registro o si han pasado más de 3 días
+        if ultima_fecha_marcada is None:
+            # Primer registro del grupo
+            grupo.at[indice, 'validacion'] = 1
+            ultima_fecha_marcada = fila['FEC_SERVICIO']
+        else:
+            # Verificar si han pasado más de 3 días
+            dias_diff = (fila['FEC_SERVICIO'] - ultima_fecha_marcada).days
+            if dias_diff > 3:
+                grupo.at[indice, 'validacion'] = 1
+                ultima_fecha_marcada = fila['FEC_SERVICIO']
+    
+    return grupo
+
+# Aplicar la función validacion_C5 a cada grupo 'FACTURA', 'DX_PRINCIPAL.1' de dfTemporal
+dfTemporal = dfTemporal.groupby(['FACTURA', 'DX_PRINCIPAL.1']).apply(validacion_C5, include_groups=False).reset_index(
+    level = ['FACTURA', 'DX_PRINCIPAL.1'], drop=False)
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
+dfCapital_sendas.update(dfTemporal[['validacion']])
+
 
 # %% Descargar los archivos
 print('Descargando archivos...')
