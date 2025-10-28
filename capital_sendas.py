@@ -133,13 +133,18 @@ print('Procesando datos...')
 #    dfFacTotal.drop_duplicates(subset='FACTURA', keep='first'),
 #    on=['FACTURA'], how='left')
 
-# Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a tipo fecha
-dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 15), format='%a %b %d %Y')
-dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 15), format='%a %b %d %Y')
-dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 15), format='%a %b %d %Y')
+# Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a tipo fecha hora y agregar 5 horas para solucionar problema de n8n
+dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 24)) + pd.Timedelta(hours=5)
+dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 24)) + pd.Timedelta(hours=5)
+dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 24)) + pd.Timedelta(hours=5)
 
 # Seleccionar el mes de 'FECHA_FACT' igual a la variable 'Mes'
 dfCapital_sendas = dfCapital_sendas[dfCapital_sendas['FECHA_FACT'].dt.month == Mes]
+
+# Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a solo fecha
+dfCapital_sendas['FEC_NACIMIENTO'] = dfCapital_sendas['FEC_NACIMIENTO'].dt.date
+dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.date
+dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.date
 
 # Convertir 'EDAD' y 'CANT_SERVICIO' a entero
 dfCapital_sendas['EDAD'] = dfCapital_sendas['EDAD'].astype(int)
@@ -296,13 +301,13 @@ dfCapital_sendas['validacion'] = 0
 
 # Regla Quirófano
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo 'y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo ' y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][[
         'FACTURA', 'FEC_SERVICIO', 'GRUPO QX', 'validacion']]
 
 # De 'FEC_SERVICIO' extraer solo la fecha sin la hora
-dfTemporal['FEC_SERVICIO'] = dfTemporal['FEC_SERVICIO'].dt.date
+#dfTemporal['FEC_SERVICIO'] = dfTemporal['FEC_SERVICIO'].dt.date
 
 # Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
 dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'FEC_SERVICIO', 'GRUPO QX'], ascending=[True, True, False])
@@ -338,7 +343,7 @@ def validacion_Qx(grupo):
                     actualizados += 1
                     actualizados_grupo += 1
             else:
-                # Por ser un nuevo grupo se asiga validación y se actualizan contadores
+                # Por ser un nuevo grupo se asigna validación y se actualizan contadores
                 grupo.at[indice, 'validacion'] = 1
                 actualizados += 1
                 actualizados_grupo = 1
@@ -500,12 +505,39 @@ dfTemporal = dfTemporal.groupby(['FACTURA', 'DX_PRINCIPAL.1']).apply(validacion_
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
 
+# Regla Quirofano Básico Parto y Cesarea
+
+# De dfCapital_sendas filtrar por 'tipologia' igual a Qx1 y seleccionar las columnas 'FACTURA', 'SERVICIO' y crear dfTemporal
+dfTemporal = dfCapital_sendas[
+    dfCapital_sendas['tipologia'] == 'Qx1'][['FACTURA', 'SERVICIO', 'validacion']].copy()
+
+# Ordenar dfTemporal por 'FACTURA', 'SERVICIO'
+dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'SERVICIO'])
+
+# Marcar solo el primer registro de cada grupo 'FACTURA', 'SERVICIO' con 'validacion' = 1
+dfTemporal['validacion'] = (~dfTemporal.duplicated(subset=['FACTURA', 'SERVICIO'], keep='first')).astype(int)
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
+dfCapital_sendas.update(dfTemporal[['validacion']])
+
+
+# Regla Resonancia Nuclear Magnética
+
+# Crear máscara para registros con tipologia 'RM'
+tmpMask = dfCapital_sendas['tipologia'] == 'RM'
+
+# Asignar CANT_SERVICIO a validacion solo donde se cumple la condición
+dfCapital_sendas.loc[tmpMask, 'validacion'] = dfCapital_sendas.loc[tmpMask, 'CANT_SERVICIO']
+
+
 # %% Descargar los archivos
 print('Descargando archivos...')
 
-# Convertir las columnas tipo fecha/hora a solo fecha en texto
-dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.strftime('%Y/%m/%d')
-dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.strftime('%Y/%m/%d')
+# Convertir las columnas tipo fecha en texto
+dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].apply(
+    lambda x: x.strftime('%Y/%m/%d') if pd.notna(x) else None)
+dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].apply(
+    lambda x: x.strftime('%Y/%m/%d') if pd.notna(x) else None)
 
 # Columnas
 Columnas = ['SEDE','SEDE_NOMBRE','FACTURA','FECHA_FACT','TIPO_FACTURA','INGRESO','FEC_INGRESO','COD_USU_FACTURADOR','NOM_FACTURADOR','DOC_PACIENTE',
