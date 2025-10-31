@@ -102,7 +102,7 @@ for archivo in dfArchivos['Archivo']:
     dfTemp = dfTemp[1:]
     # Seleccionar las columnas necesarias
     dfTemp = dfTemp[['SEDE_NOMBRE','FACTURA','FECHA_FACT','INGRESO','DOC_PACIENTE','NOMBRE_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD',
-                     'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO',
+                     'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','VALOR_TOTAL',
                      'COD_PLAN','NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1','AMBITO',
                      'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
     # Seleccionar las filas donde 'NOM_PLAN' contiene 'PGP'
@@ -146,9 +146,10 @@ dfCapital_sendas['FEC_NACIMIENTO'] = dfCapital_sendas['FEC_NACIMIENTO'].dt.date
 dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.date
 dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.date
 
-# Convertir 'EDAD' y 'CANT_SERVICIO' a entero
+# Convertir 'EDAD', 'CANT_SERVICIO' y 'VALOR_TOTAL' a entero
 dfCapital_sendas['EDAD'] = dfCapital_sendas['EDAD'].astype(int)
 dfCapital_sendas['CANT_SERVICIO'] = pd.to_numeric(dfCapital_sendas['CANT_SERVICIO'], errors='coerce').fillna(0).astype(int)
+dfCapital_sendas['VALOR_TOTAL'] = pd.to_numeric(dfCapital_sendas['VALOR_TOTAL'], errors='coerce').fillna(0).astype(int)
 
 # Agregar columnas de dfCodigos a dfCapital_sendas
 
@@ -301,13 +302,11 @@ dfCapital_sendas['validacion'] = 0
 
 # Regla Quirófano
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo ' y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo ' y 'VALOR_TOTAL' > 0 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
-    dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')][[
+    (dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')) &
+    (dfCapital_sendas['VALOR_TOTAL'] > 0)][[
         'FACTURA', 'FEC_SERVICIO', 'GRUPO QX', 'validacion']]
-
-# De 'FEC_SERVICIO' extraer solo la fecha sin la hora
-#dfTemporal['FEC_SERVICIO'] = dfTemporal['FEC_SERVICIO'].dt.date
 
 # Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
 dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'FEC_SERVICIO', 'GRUPO QX'], ascending=[True, True, False])
