@@ -302,14 +302,14 @@ dfCapital_sendas['validacion'] = 0
 
 # Regla Quirófano
 
-# De dfCapital_sendas filtrar por 'GRUPO QX' que comience por 'Grupo ' y 'VALOR_TOTAL' > 0 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'GRUPO QX' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'tipologia' que comience por 'Qx' y 'VALOR_TOTAL' > 0 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'tipologia', 'validacion' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
-    (dfCapital_sendas['GRUPO QX'].fillna('').str.startswith('Grupo ')) &
+    (dfCapital_sendas['tipologia'].fillna('').str.startswith('Qx')) &
     (dfCapital_sendas['VALOR_TOTAL'] > 0)][[
-        'FACTURA', 'FEC_SERVICIO', 'GRUPO QX', 'validacion']]
+        'FACTURA', 'FEC_SERVICIO', 'tipologia', 'validacion']]
 
-# Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
-dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'FEC_SERVICIO', 'GRUPO QX'], ascending=[True, True, False])
+# Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'tipologia' descendente
+dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'FEC_SERVICIO', 'tipologia'], ascending=[True, True, False])
 
 # Función validacion_Qx
 #  ≤ 3 registros en la misma 'FACTURA', 'FEC_SERVICIO', colocar 'validacion' = 1
@@ -334,9 +334,9 @@ def validacion_Qx(grupo):
     for indice, fila in grupo.iterrows():
         # Valida que no se asignen más de 3 registros
         if actualizados < 3:
-            # Valida que se sigue en el mismo 'GRUPO QX'
-            if fila['GRUPO QX'] == grupo_qx:
-                # Valida que no se asignen más de 2 registros por 'GRUPO QX'
+            # Valida que se sigue en el mismo 'tipologia'
+            if fila['tipologia'] == grupo_qx:
+                # Valida que no se asignen más de 2 registros por 'tipologia'
                 if actualizados_grupo < 2:
                     grupo.at[indice, 'validacion'] = 1
                     actualizados += 1
@@ -346,7 +346,7 @@ def validacion_Qx(grupo):
                 grupo.at[indice, 'validacion'] = 1
                 actualizados += 1
                 actualizados_grupo = 1
-                grupo_qx = fila['GRUPO QX']                
+                grupo_qx = fila['tipologia']                
     return grupo
 
 # Aplicar la función validacion_Qx a cada grupo 'FACTURA', 'FEC_SERVICIO' de dfTemporal
@@ -445,31 +445,34 @@ dfCapital_sendas.loc[
 
 # Regla Consultorio urgencias
 
-# De dfCapital_sendas 'validacion' es igual a 1 cuando tipologia es 'C5'
+# De dfCapital_sendas 'validacion' es igual a 0 cuando tipologia es 'C5'
 dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C5'), 'validacion'] = 0
 
 
-# De dfCapital_sendas filtrar por 'tipologia' igual a C5 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'validacion' y crear dfTemporal
+# De dfCapital_sendas filtrar por 'tipologia' igual a C5 y seleccionar las columnas 'FACTURA', 'INGRESO', 'DOC_PACIENTE', 'INGRESO', 'FEC_SERVICIO', 'validacion' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['tipologia'] == 'C5'][[
-        'FACTURA', 'DX_PRINCIPAL.1', 'FEC_SERVICIO', 'validacion']]
+        'FACTURA', 'INGRESO', 'DOC_PACIENTE', 'DX_PRINCIPAL.1', 'FEC_SERVICIO', 'validacion']]
 
-# Ordenar dfTemporal por 'FACTURA', 'FEC_SERVICIO' ascendentes y por 'GRUPO QX' descendente
-dfTemporal = dfTemporal.sort_values(by=['FACTURA', 'DX_PRINCIPAL.1', 'FEC_SERVICIO'])
+# Ordenar dfTemporal por 'DOC_PACIENTE', 'DX_PRINCIPAL.1' y 'FEC_SERVICIO'
+dfTemporal = dfTemporal.sort_values(by=['DOC_PACIENTE', 'DX_PRINCIPAL.1', 'FEC_SERVICIO'])
+
+# Eliminar duplicados de 'INGRESO', conservando la primera ocurrencia
+dfTemporal = dfTemporal.drop_duplicates(subset='INGRESO', keep='first')
 
 # Convertir FECHA a datetime
 dfTemporal['FEC_SERVICIO'] = pd.to_datetime(dfTemporal['FEC_SERVICIO'], errors='coerce')
 
 
 # Función validacion_C5
-# Misma 'FACTURA' y 'DX_PRINCIPAL.1' > 3 dias de diferencia de 'FEC_SERVICIO', colocar 'validacion' = 1
+# Misma 'DOC_PACIENTE' y 'DX_PRINCIPAL.1' > 3 dias de diferencia de 'FEC_SERVICIO', colocar 'validacion' = 1
 def validacion_C5(grupo):
     """
     Aplica la regla de validación para C5 Consultorio urgencias.
     
     Args:
-    - grupo (DataFrame): Grupo de registros con la misma 'FACTURA', 'DX_PRINCIPAL.1' ordenados por 'FEC_SERVICIO'.
+    - grupo (DataFrame): Grupo de registros con la misma 'DOC_PACIENTE', 'DX_PRINCIPAL.1' ordenados por 'FEC_SERVICIO'.
     
     Returns:
     - grupo (DataFrame): Grupo de registros con la columna 'validacion' actualizada.
@@ -497,8 +500,8 @@ def validacion_C5(grupo):
     return grupo
 
 # Aplicar la función validacion_C5 a cada grupo 'FACTURA', 'DX_PRINCIPAL.1' de dfTemporal
-dfTemporal = dfTemporal.groupby(['FACTURA', 'DX_PRINCIPAL.1']).apply(validacion_C5, include_groups=False).reset_index(
-    level = ['FACTURA', 'DX_PRINCIPAL.1'], drop=False)
+dfTemporal = dfTemporal.groupby(['DOC_PACIENTE', 'DX_PRINCIPAL.1']).apply(validacion_C5, include_groups=False).reset_index(
+    level = ['DOC_PACIENTE', 'DX_PRINCIPAL.1'], drop=False)
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
