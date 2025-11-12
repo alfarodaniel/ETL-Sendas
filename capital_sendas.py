@@ -449,7 +449,6 @@ dfCapital_sendas.loc[
 dfCapital_sendas.loc[
     (dfCapital_sendas['tipologia'] == 'C5'), 'validacion'] = 0
 
-
 # De dfCapital_sendas filtrar por 'tipologia' igual a C5 y seleccionar las columnas 'FACTURA', 'INGRESO', 'DOC_PACIENTE', 'INGRESO', 'FEC_SERVICIO', 'validacion' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['tipologia'] == 'C5'][[
@@ -463,7 +462,6 @@ dfTemporal = dfTemporal.drop_duplicates(subset='INGRESO', keep='first')
 
 # Convertir FECHA a datetime
 dfTemporal['FEC_SERVICIO'] = pd.to_datetime(dfTemporal['FEC_SERVICIO'], errors='coerce')
-
 
 # Función validacion_C5
 # Misma 'DOC_PACIENTE' y 'DX_PRINCIPAL.1' > 3 dias de diferencia de 'FEC_SERVICIO', colocar 'validacion' = 1
