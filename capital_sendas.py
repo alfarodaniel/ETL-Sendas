@@ -103,8 +103,8 @@ for archivo in dfArchivos['Archivo']:
     # Seleccionar las columnas necesarias
     dfTemp = dfTemp[['SEDE_NOMBRE','FACTURA','FECHA_FACT','INGRESO','DOC_PACIENTE','NOMBRE_PACIENTE','FEC_NACIMIENTO','GENERO','EDAD',
                      'SERVICIO','NOM_SERVICIO_PRODUCTO','FEC_SERVICIO','CANT_SERVICIO','VALOR_TOTAL',
-                     'COD_PLAN','NOM_PLAN','COD_ENTIDAD1','NOM_ENTIDAD1','AMBITO',
-                     'DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
+                     'COD_PLAN','NOM_PLAN','NOM_CENTROCOS','COD_ENTIDAD1','NOM_ENTIDAD1',
+                     'AMBITO','DX_PRINCIPAL.0','DX_PRINCIPAL.1']]
     # Seleccionar las filas donde 'NOM_PLAN' contiene 'PGP'
     dfTemp = dfTemp[dfTemp['NOM_PLAN'].str.contains('PGP', na=False)]
     # seleecionar las filas donde 'FACTURA' no comienza por 'NS'
@@ -134,9 +134,9 @@ print('Procesando datos...')
 #    on=['FACTURA'], how='left')
 
 # Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a tipo fecha hora y agregar 5 horas para solucionar problema de n8n
-dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 24)) + pd.Timedelta(hours=5)
-dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 24)) + pd.Timedelta(hours=5)
-dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 24)) + pd.Timedelta(hours=5)
+dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
 
 # Seleccionar el mes de 'FECHA_FACT' igual a la variable 'Mes'
 dfCapital_sendas = dfCapital_sendas[dfCapital_sendas['FECHA_FACT'].dt.month == Mes]
@@ -167,13 +167,35 @@ dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_senda
 dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FEC_NACIMIENTO']).apply(
     lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
 
-# Agregar columna de dfTipologia a dfCapital_sendas
+# Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas 
+# cruzando con 'SERVICIO' para tipología diferente de H1 a H5
 
-# Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas cruzando con 'SERVICIO'
+# Filtrar dfTipologia para excluir H1 a H5
+dfTipologia_filtrado = dfTipologia[~dfTipologia['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
+
+# Realizar el merge
+dfCapital_sendas = pd.merge(
+    dfCapital_sendas, 
+    dfTipologia_filtrado[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'), 
+    on='SERVICIO', how='left')
+
+# Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas 
+# cruzando con 'SERVICIO' y 'NOM_CENTROCOS' para tipología de H1 a H5
+
+# Filtrar dfTipologia para H1 a H5
+dfTipologia_filtrado = dfTipologia[dfTipologia['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
+
+# Realizar el merge
 dfCapital_sendas = pd.merge(
     dfCapital_sendas,
-    dfTipologia[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'),
-    on=['SERVICIO'], how='left')
+    dfTipologia[['SERVICIO', 'NOM_CENTROCOS', 'tipologia']].drop_duplicates(subset=['SERVICIO', 'NOM_CENTROCOS'], keep='first'),
+    on=['SERVICIO', 'NOM_CENTROCOS'], how='left', suffixes=('', '_temp'))
+
+# Combinar las columnas en una sola 'tipologia'
+dfCapital_sendas['tipologia'] = dfCapital_sendas['tipologia_temp'].fillna(dfCapital_sendas['tipologia'])
+
+# Eliminar columna temporal
+dfCapital_sendas.drop(columns=['tipologia_temp'], inplace=True, errors='ignore')
 
 # Agregar columnas de dfAnexos a dfCapital_sendas
 
@@ -300,6 +322,7 @@ dfComprobar = dfComprobar.drop(columns=['NOMBRE_PACIENTE'])
 # Crear columna 'validacion' con valor 0
 dfCapital_sendas['validacion'] = 0
 
+
 # Regla Quirófano
 
 # De dfCapital_sendas filtrar por 'tipologia' que comience por 'Qx' y 'VALOR_TOTAL' > 0 y seleccionar las columnas 'FACTURA', 'FEC_SERVICIO', 'tipologia', 'validacion' y crear dfTemporal
@@ -356,8 +379,10 @@ dfTemporal = dfTemporal.groupby(['FACTURA', 'FEC_SERVICIO']).apply(validacion_Qx
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
 dfCapital_sendas.update(dfTemporal[['validacion']])
 
+
 # Regla Egreso
 
+"""
 # De dfCapital_sendas filtrar por 'CONCEPTO' que comience por ('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL') y seleccionar las columnas 'FACTURA', 'CONCEPTO' y 'validacion' y crear dfTemporal
 dfTemporal = dfCapital_sendas[
     dfCapital_sendas['CONCEPTO'].fillna('').str.startswith(('UCI ', 'HOSPITALIZACION GENERAL', 'U.SALUD MENTAL'))][[
@@ -365,12 +390,25 @@ dfTemporal = dfCapital_sendas[
 
 # Eliminar duplicados de 'FACTURA' y 'CONCEPTO'
 dfTemporal = dfTemporal.drop_duplicates(subset=['FACTURA', 'CONCEPTO'], keep='first')
+"""
 
-# Actualizar 'validacion' a 1
-dfTemporal['validacion'] = 1
+# De dfCapital_sendas filtrar por 'tipologia' que comience por 'H' y seleccionar las columnas 'FACTURA', 'SERVICIO', 'NOM_CENTROCOS', 'tipologia' y crear dfTemporal
+dfTemporal = dfCapital_sendas[
+    dfCapital_sendas['tipologia'].fillna('').str.startswith('H')][[
+        'FACTURA', 'SERVICIO', 'NOM_CENTROCOS', 'tipologia']].copy()
 
-# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de dfTemporal
-dfCapital_sendas.update(dfTemporal[['validacion']])
+# Separar en dos grupos
+df_H1_H5 = dfTemporal[dfTemporal['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
+df_Otros_H = dfTemporal[~dfTemporal['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
+
+# Eliminar duplicados según el grupo
+df_H1_H5 = df_H1_H5.drop_duplicates(subset=['FACTURA', 'SERVICIO', 'NOM_CENTROCOS'], keep='first')
+df_Otros_H = df_Otros_H.drop_duplicates(subset=['FACTURA', 'SERVICIO'], keep='first')
+
+# Actualizar los valores de 'validacion' de dfCapital_sendas a partir de cada grupo
+dfCapital_sendas.loc[df_H1_H5.index, 'validacion'] = 1
+dfCapital_sendas.loc[df_Otros_H.index, 'validacion'] = 1
+
 
 # Regla Ambulatorio
 
