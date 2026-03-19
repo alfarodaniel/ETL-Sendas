@@ -62,19 +62,19 @@ def descargaExcel(url):
 
 # Cargar Codigos consultas de OneDrive
 print('- Cargando Códigos')
-dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcLsPJKWhwxIoljSAm24vB8BouYTCUF1__tXxPVwDn44aA?e=WNkZxt")
+dfCodigos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/tecnologia_subrednorte_gov_co/IQD8k0vA2rPYS6ZwGm03O-gOAYiy9sAmCzC5T3t_VqlZTh4?e=sSBHYk")
 
 # Cargar Anexos Capital Salud unificados 2023 de OneDrive
 print('- Cargando Anexos')
-dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EdjY3dEvXXFHod9G_nNByAYBiNlxWKem41zHWM1y2vM3Cw")
+dfAnexos = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/tecnologia_subrednorte_gov_co/IQAuzKa9KMRHSJbQjmlZ1zbFAXvEBdKgWuSxyRegqZL2YaU?e=4718b9")
 
 # Cargar Codigo tipologia de de OneDrive
 print('- Cargando Tipologia')
-dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EcJnfLQcpo1IhICDndY709kBtCTVQQ5t2bkRyw4PPA3U9w")
+dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/tecnologia_subrednorte_gov_co/IQAuVKL_koRNTrAUW1B3p1GDAbXYh_BQJgYGCXK0CSRXIf8?e=fz492n")
 
 # Cargar Bases norte
 print('- Cargando bases_norte')
-dfBases = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/mercadeo_subrednorte_gov_co/EXBZ0Ym5E1lJpRDK6W48trMBFbExvI0oO7Us7EhWa2ph4g?e=EZcGQn")
+dfBases = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/tecnologia_subrednorte_gov_co/IQAOVl0wCFsvRZzVPRS6UuJYAahO8oyXAvdAh7TqapsaEzU?e=6Gl7ub")
 
 # listar los archivos en el directorio actual que comiencen con "produccion" y terminen con ".xlsx"
 archivos = [f for f in os.listdir('.') if f.startswith('produccion') and f.endswith('.xlsx')]
