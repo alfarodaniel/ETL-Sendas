@@ -76,8 +76,8 @@ dfTipologia = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/pe
 print('- Cargando bases_norte')
 dfBases = descargaExcel("https://subredeintenorte-my.sharepoint.com/:x:/g/personal/tecnologia_subrednorte_gov_co/IQAOVl0wCFsvRZzVPRS6UuJYAahO8oyXAvdAh7TqapsaEzU?e=6Gl7ub")
 
-# listar los archivos en el directorio actual que comiencen con "produccion" y terminen con ".xlsx"
-archivos = [f for f in os.listdir('.') if f.startswith('produccion') and f.endswith('.xlsx')]
+# listar los archivos en el directorio actual que comiencen con "produccion" o "egreso" y terminen con ".xlsx"
+archivos = [f for f in os.listdir('.') if (f.startswith('produccion') or f.startswith('egreso')) and f.endswith('.xlsx')]
 # Convertir la lista de archivos en un dataframe
 dfArchivos = pd.DataFrame(archivos, columns=['Archivo'])
 # Separar la columna 'Archivo' usando '_' como separador, y solo guardar la columna 2 en 'AnoMes'
@@ -89,12 +89,12 @@ dfArchivos = dfArchivos.sort_values(by='Archivo', ascending=False).reset_index(d
 # Seleccionar los ultimos 2 digitos de 'AnoMes' y guardarlos en la variable 'Mes' como entero   
 Mes = int(dfArchivos['AnoMes'].str[-2:].max())
 
-# Cagar los archivos excel de la columna 'Archivo' en dfCapital_sendas
+# Cagar de dfArchivos los archivos excel de la columna 'Archivo' que comiencen con 'produccion' en dfCapital_sendas
 # Si hay más de un archivo, concatenarlos en un solo dataframe
 # La primera fila de cada archivo es el encabezado
 print('- Cargando Producción')
 dfCapital_sendas = pd.DataFrame()
-for archivo in dfArchivos['Archivo']:
+for archivo in dfArchivos[dfArchivos['Archivo'].str.startswith('produccion')]['Archivo']:
     print('- -', archivo)
     dfTemp = con.query(f"SELECT * FROM st_read('{archivo}')").df()
     # la primera fila es el encabezado
@@ -124,6 +124,38 @@ for archivo in dfArchivos['Archivo']:
     # Concatenar los dataframes
     dfCapital_sendas = pd.concat([dfCapital_sendas, dfTemp], ignore_index=True)
 
+# Cagar de dfArchivos los archivos excel de la columna 'Archivo' que comiencen con 'egreso' en dfCapital_sendas_egresos
+print('- Cargando Egreso')
+dfCapital_sendas_egresos = con.query(f"SELECT * FROM st_read('{dfArchivos[dfArchivos['Archivo'].str.startswith('egreso')]['Archivo'].values[0]}')").df()
+# la primera fila es el encabezado
+dfCapital_sendas_egresos.columns = dfCapital_sendas_egresos.iloc[0]
+dfCapital_sendas_egresos = dfCapital_sendas_egresos[1:]
+# Seleccionar las columnas necesarias
+dfCapital_sendas_egresos = dfCapital_sendas_egresos[['SEDE_INGRESO','NUMERO INGRESO','DOCUMENTO PACIENTE','FEC_NACIMIENTO','GENERO','AÑOS',
+    'COD AREA SERVICIO SUBGRUPO','NOMBRE AREA SERVICIO SUBGRUPO','FECHA_EGRESO','TIEMPO_ESTANCIA_DIAS_CAMA',
+    'CODIGO_RESPONSABLE','NOMBRE_RESPONSABLE',
+    'NOMBRE_DIAGNOSTICO_EGRESO','CODIGO_DIAGNOSTICO_EGRESO','TIPO']]
+# Cambiar nombre de columnas
+dfCapital_sendas_egresos = dfCapital_sendas_egresos.rename(columns={
+    'SEDE_INGRESO': 'SEDE_NOMBRE',
+    'NUMERO INGRESO': 'INGRESO',
+    'DOCUMENTO PACIENTE': 'DOC_PACIENTE',
+    'FEC_NACIMIENTO': 'FEC_NACIMIENTO',
+    'GENERO': 'GENERO',
+    'AÑOS': 'EDAD',
+    'COD AREA SERVICIO SUBGRUPO': 'SERVICIO',
+    'NOMBRE AREA SERVICIO SUBGRUPO': 'NOM_SERVICIO_PRODUCTO',
+    'FECHA_EGRESO': 'FEC_SERVICIO',
+    'TIEMPO_ESTANCIA_DIAS_CAMA': 'CANT_SERVICIO',
+    'CODIGO_RESPONSABLE': 'COD_ENTIDAD1',
+    'NOMBRE_RESPONSABLE': 'NOM_ENTIDAD1',
+    'NOMBRE_DIAGNOSTICO_EGRESO': 'DX_PRINCIPAL.0',
+    'CODIGO_DIAGNOSTICO_EGRESO': 'DX_PRINCIPAL.1',
+    'TIPO': 'tipologia'
+})
+# Agregar 'FECHA_FACT' de 'FEC_SERVICIO'
+dfCapital_sendas_egresos['FECHA_FACT'] = dfCapital_sendas_egresos['FEC_SERVICIO']
+
 # %% Procesar datos
 print('Procesando datos...')
 
@@ -134,22 +166,36 @@ print('Procesando datos...')
 #    on=['FACTURA'], how='left')
 
 # Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a tipo fecha hora y agregar 5 horas para solucionar problema de n8n
-dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
-dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
-dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+#dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+#dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+#dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'].str.slice(0, 24),format="%a %b %d %Y %H:%M:%S",errors="coerce") + pd.Timedelta(hours=5)
+dfCapital_sendas['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas['FEC_NACIMIENTO'])
+dfCapital_sendas['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas['FEC_SERVICIO'])
+dfCapital_sendas['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas['FECHA_FACT'])
+dfCapital_sendas_egresos['FEC_NACIMIENTO'] = pd.to_datetime(dfCapital_sendas_egresos['FEC_NACIMIENTO'])
+dfCapital_sendas_egresos['FEC_SERVICIO'] = pd.to_datetime(dfCapital_sendas_egresos['FEC_SERVICIO'])
+dfCapital_sendas_egresos['FECHA_FACT'] = pd.to_datetime(dfCapital_sendas_egresos['FECHA_FACT'])
+
 
 # Seleccionar el mes de 'FECHA_FACT' igual a la variable 'Mes'
 dfCapital_sendas = dfCapital_sendas[dfCapital_sendas['FECHA_FACT'].dt.month == Mes]
+dfCapital_sendas_egresos = dfCapital_sendas_egresos[dfCapital_sendas_egresos['FECHA_FACT'].dt.month == Mes]
 
 # Convertir las columnas 'FEC_NACIMIENTO', 'FEC_SERVICIO' y 'FECHA_FACT' a solo fecha
 dfCapital_sendas['FEC_NACIMIENTO'] = dfCapital_sendas['FEC_NACIMIENTO'].dt.date
 dfCapital_sendas['FEC_SERVICIO'] = dfCapital_sendas['FEC_SERVICIO'].dt.date
 dfCapital_sendas['FECHA_FACT'] = dfCapital_sendas['FECHA_FACT'].dt.date
+dfCapital_sendas_egresos['FEC_NACIMIENTO'] = dfCapital_sendas_egresos['FEC_NACIMIENTO'].dt.date
+dfCapital_sendas_egresos['FEC_SERVICIO'] = dfCapital_sendas_egresos['FEC_SERVICIO'].dt.date
+dfCapital_sendas_egresos['FECHA_FACT'] = dfCapital_sendas_egresos['FECHA_FACT'].dt.date
+
 
 # Convertir 'EDAD', 'CANT_SERVICIO' y 'VALOR_TOTAL' a entero
 dfCapital_sendas['EDAD'] = dfCapital_sendas['EDAD'].astype(int)
 dfCapital_sendas['CANT_SERVICIO'] = pd.to_numeric(dfCapital_sendas['CANT_SERVICIO'], errors='coerce').fillna(0).astype(int)
 dfCapital_sendas['VALOR_TOTAL'] = pd.to_numeric(dfCapital_sendas['VALOR_TOTAL'], errors='coerce').fillna(0).astype(int)
+dfCapital_sendas_egresos['EDAD'] = dfCapital_sendas_egresos['EDAD'].astype(int)
+dfCapital_sendas_egresos['CANT_SERVICIO'] = pd.to_numeric(dfCapital_sendas_egresos['CANT_SERVICIO'], errors='coerce').fillna(0).astype(int)
 
 # Agregar columnas de dfCodigos a dfCapital_sendas
 
@@ -166,6 +212,10 @@ dfCapital_sendas['EDAD 1'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_senda
     lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
 dfCapital_sendas['EDAD 2'] = (dfCapital_sendas['FEC_SERVICIO'] - dfCapital_sendas['FEC_NACIMIENTO']).apply(
     lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
+dfCapital_sendas_egresos['EDAD 1'] = (dfCapital_sendas_egresos['FEC_SERVICIO'] - dfCapital_sendas_egresos['FEC_NACIMIENTO']).apply(
+    lambda x: x.days // 365 if x.days >= 365 else (x.days // 30 if x.days >= 30 else x.days))
+dfCapital_sendas_egresos['EDAD 2'] = (dfCapital_sendas_egresos['FEC_SERVICIO'] - dfCapital_sendas_egresos['FEC_NACIMIENTO']).apply(
+    lambda x: 'Años' if x.days >= 365 else ('Meses' if x.days >= 30 else 'Días'))
 
 # Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas 
 # cruzando con 'SERVICIO' para tipología diferente de H1 a H5
@@ -179,6 +229,7 @@ dfCapital_sendas = pd.merge(
     dfTipologia_filtrado[['SERVICIO', 'tipologia']].drop_duplicates(subset='SERVICIO', keep='first'), 
     on='SERVICIO', how='left')
 
+"""
 # Agregar columnas 'tipologia' de dfTipologia a dfCapital_sendas 
 # cruzando con 'SERVICIO' y 'NOM_CENTROCOS' para tipología de H1 a H5
 
@@ -192,10 +243,24 @@ dfCapital_sendas = pd.merge(
     on=['SERVICIO', 'NOM_CENTROCOS'], how='left', suffixes=('', '_temp'))
 
 # Combinar las columnas en una sola 'tipologia'
-dfCapital_sendas['tipologia'] = dfCapital_sendas['tipologia_temp'].fillna(dfCapital_sendas['tipologia'])
+dfCapital_sendas_egresos_filtrado['tipologia'] = dfCapital_sendas['tipologia_temp'].fillna(dfCapital_sendas['tipologia'])
 
 # Eliminar columna temporal
 dfCapital_sendas.drop(columns=['tipologia_temp'], inplace=True, errors='ignore')
+"""
+# Actualizar los valores de 'tipologia' de dfCapital_sendas_egresos
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'HOSPITALIZACION MEDICINA GENERAL', 'tipologia'] = 'H1'
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'HOSPITALIZACION GINECOLOGÍA Y OBSTETRICIA', 'tipologia'] = 'H2'
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'HOSPITALIZACION MEDICINA INTERNA', 'tipologia'] = 'H3'
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'HOSPITALIZACION PEDIATRIA', 'tipologia'] = 'H4'
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'UNIDAD DE RECIEN NACIDOS BASICO', 'tipologia'] = 'H4'
+dfCapital_sendas_egresos.loc[dfCapital_sendas_egresos['tipologia'] == 'HOSPITALIZACION QUIRURGICO', 'tipologia'] = 'H5'
+
+# Filtrar dfCapital_sendas_egresos para H1 a H5
+dfCapital_sendas_egresos_filtrado = dfCapital_sendas_egresos[dfCapital_sendas_egresos['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
+
+# Agregar las filas de dfCapital_sendas_egresos_filtrado a dfCapital_sendas en las columnas que tienen el mismo nombre
+dfCapital_sendas = pd.concat([dfCapital_sendas, dfCapital_sendas_egresos_filtrado], ignore_index=True)
 
 # Agregar columnas de dfAnexos a dfCapital_sendas
 
@@ -402,7 +467,7 @@ df_H1_H5 = dfTemporal[dfTemporal['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'
 df_Otros_H = dfTemporal[~dfTemporal['tipologia'].isin(['H1', 'H2', 'H3', 'H4', 'H5'])]
 
 # Eliminar duplicados según el grupo
-df_H1_H5 = df_H1_H5.drop_duplicates(subset=['FACTURA', 'SERVICIO', 'NOM_CENTROCOS'], keep='first')
+#df_H1_H5 = df_H1_H5.drop_duplicates(subset=['FACTURA', 'SERVICIO', 'NOM_CENTROCOS'], keep='first')
 df_Otros_H = df_Otros_H.drop_duplicates(subset=['FACTURA', 'SERVICIO'], keep='first')
 
 # Actualizar los valores de 'validacion' de dfCapital_sendas a partir de cada grupo
