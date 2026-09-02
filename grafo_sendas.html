@@ -1,651 +1,166 @@
-<html>
-    <head>
-        <meta charset="utf-8">
-        
-            <script src="lib/bindings/utils.js"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-                <link href="lib/tom-select/tom-select.css" rel="stylesheet">
-                <script src="lib/tom-select/tom-select.complete.min.js"></script>
-            
-        
-<center>
-<h1></h1>
-</center>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Capital Sendas - Flujo de datos (version actual)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; background:#fafafa; }
+  header { text-align:center; padding: 14px 10px 6px 10px; }
+  header h1 { margin: 0 0 8px 0; font-size: 22px; }
+  #leyenda { max-width: 900px; margin: 0 auto 10px auto; font-size: 13px; text-align: left;
+             background:#f7f7f7; border:1px solid #ddd; border-radius:6px; padding:10px 16px; }
+  #controles { text-align:center; margin-bottom: 8px; }
+  #controles button, #controles input { font-size: 13px; padding: 6px 10px; margin: 0 4px; }
+  #mynetwork { width: 100%; height: 78vh; border: 1px solid #ddd; background-color: #ffffff; }
+  #estado { text-align:center; font-size:12px; color:#888; padding:4px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; }
+</style>
+</head>
+<body>
 
-<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
-<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
-        <link
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
-          rel="stylesheet"
-          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
-          crossorigin="anonymous"
-        />
-        <script
-          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
-          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
-          crossorigin="anonymous"
-        ></script>
+<header>
+  <h1>Capital Sendas &mdash; Flujo de datos (version actual)</h1>
+  <div id="leyenda">
+    <b>Leyenda de colores</b><br>
+    <span class="dot" style="background:#DAA520;"></span> Amarillo: archivo o tabla (fuente o resultado) &nbsp;&nbsp;
+    <span class="dot" style="background:#00CED1;"></span> Aqua: columna &nbsp;&nbsp;
+    <span class="dot" style="background:#FF69B4;"></span> Rosa: calculo / proceso &nbsp;&nbsp;
+    <span class="dot" style="background:#32CD32;"></span> Verde lima: condicion de cruce o filtro &nbsp;&nbsp;
+    <span class="dot" style="background:#FF0000;"></span> Rojo: regla de validacion (capitacion)<br>
+    Novedades respecto a la version anterior: fuente <b>egreso</b> para hospitalizaciones H1-H5, seleccion
+    automatica del archivo del mes mas reciente, deduplicacion al concatenar varios archivos de produccion,
+    filtro PGP/no-SN al cargar, y separacion explicita de cada regla de validacion por tipologia.
+    Haz clic en un nodo para resaltar sus conexiones directas; pasa el mouse para ver el detalle.
+  </div>
+</header>
 
+<div id="controles">
+  <input type="text" id="buscar" placeholder="Buscar nodo por nombre...">
+  <button id="btnBuscar">Buscar</button>
+  <button id="btnReset">Restablecer vista</button>
+  <button id="btnFisica">Activar/Desactivar fisica</button>
+</div>
 
-        <center>
-          <h1></h1>
-        </center>
-        <style type="text/css">
+<div id="mynetwork"></div>
+<div id="estado">Cargando grafo...</div>
 
-             #mynetwork {
-                 width: 100%;
-                 height: 750px;
-                 background-color: #ffffff;
-                 border: 1px solid lightgray;
-                 position: relative;
-                 float: left;
-             }
+<script>
+const rawNodes = [{"color": "pink", "id": "Seleccion_archivo_mes", "label": "Seleccion_archivo_mes", "shape": "dot", "size": 18, "title": "Lista los archivos del directorio que comienzan por 'produccion' o 'egreso' y terminan en .xlsx.\nExtrae el AnoMes del nombre del archivo (posicion 2 separada por '_') y se queda solo con\nlos archivos del AnoMes maximo (el mes mas reciente). De ahi se obtiene la variable 'Mes'\n(los ultimos 2 digitos de AnoMes) que se usa para filtrar FECHA_FACT mas adelante."}, {"color": "pink", "id": "Concatenacion_sin_duplicados", "label": "Concatenacion_sin_duplicados", "shape": "dot", "size": 15, "title": "Si hay mas de un archivo 'produccion' para el mismo mes, se cargan uno a uno y se concatenan.\nAntes de concatenar se hace un anti-join (merge how='left' con indicator=True, todas las columnas\ncomo llave) contra lo ya acumulado, para no duplicar filas que ya existen en dfCapital_sendas."}, {"color": "lime", "id": "Filtro_PGP_no_SN", "label": "Filtro_PGP_no_SN", "shape": "dot", "size": 12, "title": "Al cargar cada archivo de produccion se filtran solo las filas donde NOM_PLAN contiene 'PGP'\ny donde FACTURA NO comienza por 'SN'. Solo esas filas entran al flujo de capital_sendas."}, {"color": "lime", "id": "Filtro_mes_facturacion", "label": "Filtro_mes_facturacion", "shape": "dot", "size": 12, "title": "Se conservan solo los registros de produccion y de egreso cuyo mes de FECHA_FACT\ncoincide con la variable 'Mes' obtenida en Seleccion_archivo_mes."}, {"color": "yellow", "id": "produccion", "label": "produccion", "shape": "dot", "size": 30, "title": "Reporte(s) de produccion generados por DGH para el mes vigente. Se seleccionan solo las\ncolumnas necesarias, se filtran por NOM_PLAN que contiene PGP y FACTURA que no inicia por 'SN'."}, {"color": "aqua", "id": "produccion_SEDE_NOMBRE", "label": "SEDE_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 1 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_FACTURA", "label": "FACTURA", "shape": "dot", "size": 6, "title": "Columna 2 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_FECHA_FACT", "label": "FECHA_FACT", "shape": "dot", "size": 6, "title": "Columna 3 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_INGRESO", "label": "INGRESO", "shape": "dot", "size": 6, "title": "Columna 4 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_DOC_PACIENTE", "label": "DOC_PACIENTE", "shape": "dot", "size": 6, "title": "Columna 5 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_NOMBRE_PACIENTE", "label": "NOMBRE_PACIENTE", "shape": "dot", "size": 6, "title": "Columna 6 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_FEC_NACIMIENTO", "label": "FEC_NACIMIENTO", "shape": "dot", "size": 6, "title": "Columna 7 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_GENERO", "label": "GENERO", "shape": "dot", "size": 6, "title": "Columna 8 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_EDAD", "label": "EDAD", "shape": "dot", "size": 6, "title": "Columna 9 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 10 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna 11 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 6, "title": "Columna 12 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_CANT_SERVICIO", "label": "CANT_SERVICIO", "shape": "dot", "size": 6, "title": "Columna 13 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_VALOR_TOTAL", "label": "VALOR_TOTAL", "shape": "dot", "size": 6, "title": "Columna 14 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_COD_PLAN", "label": "COD_PLAN", "shape": "dot", "size": 6, "title": "Columna 15 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_NOM_PLAN", "label": "NOM_PLAN", "shape": "dot", "size": 6, "title": "Columna 16 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 6, "title": "Columna 17 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_COD_ENTIDAD1", "label": "COD_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 18 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_NOM_ENTIDAD1", "label": "NOM_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 19 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_AMBITO", "label": "AMBITO", "shape": "dot", "size": 6, "title": "Columna 20 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_DX_PRINCIPAL.0", "label": "DX_PRINCIPAL.0", "shape": "dot", "size": 6, "title": "Columna 21 (seleccionada del archivo de produccion)"}, {"color": "aqua", "id": "produccion_DX_PRINCIPAL.1", "label": "DX_PRINCIPAL.1", "shape": "dot", "size": 6, "title": "Columna 22 (seleccionada del archivo de produccion)"}, {"color": "yellow", "id": "egreso", "label": "egreso", "shape": "dot", "size": 24, "title": "Reporte de egresos hospitalarios del mismo mes, usado para construir los registros de\nhospitalizacion H1 a H5 (antes estos registros no se tomaban de un archivo de egresos aparte)."}, {"color": "aqua", "id": "egreso_SEDE_INGRESO", "label": "SEDE_INGRESO", "shape": "dot", "size": 6, "title": "Columna 1 del archivo de egresos"}, {"color": "aqua", "id": "egreso_NUMERO INGRESO", "label": "NUMERO INGRESO", "shape": "dot", "size": 6, "title": "Columna 2 del archivo de egresos"}, {"color": "aqua", "id": "egreso_DOCUMENTO PACIENTE", "label": "DOCUMENTO PACIENTE", "shape": "dot", "size": 6, "title": "Columna 3 del archivo de egresos"}, {"color": "aqua", "id": "egreso_FEC_NACIMIENTO", "label": "FEC_NACIMIENTO", "shape": "dot", "size": 6, "title": "Columna 4 del archivo de egresos"}, {"color": "aqua", "id": "egreso_GENERO", "label": "GENERO", "shape": "dot", "size": 6, "title": "Columna 5 del archivo de egresos"}, {"color": "aqua", "id": "egreso_AÑOS", "label": "AÑOS", "shape": "dot", "size": 6, "title": "Columna 6 del archivo de egresos"}, {"color": "aqua", "id": "egreso_COD AREA SERVICIO SUBGRUPO", "label": "COD AREA SERVICIO SUBGRUPO", "shape": "dot", "size": 6, "title": "Columna 7 del archivo de egresos"}, {"color": "aqua", "id": "egreso_NOMBRE AREA SERVICIO SUBGRUPO", "label": "NOMBRE AREA SERVICIO SUBGRUPO", "shape": "dot", "size": 6, "title": "Columna 8 del archivo de egresos"}, {"color": "aqua", "id": "egreso_FECHA_EGRESO", "label": "FECHA_EGRESO", "shape": "dot", "size": 6, "title": "Columna 9 del archivo de egresos"}, {"color": "aqua", "id": "egreso_TIEMPO_ESTANCIA_DIAS_CAMA", "label": "TIEMPO_ESTANCIA_DIAS_CAMA", "shape": "dot", "size": 6, "title": "Columna 10 del archivo de egresos"}, {"color": "aqua", "id": "egreso_CODIGO_RESPONSABLE", "label": "CODIGO_RESPONSABLE", "shape": "dot", "size": 6, "title": "Columna 11 del archivo de egresos"}, {"color": "aqua", "id": "egreso_NOMBRE_RESPONSABLE", "label": "NOMBRE_RESPONSABLE", "shape": "dot", "size": 6, "title": "Columna 12 del archivo de egresos"}, {"color": "aqua", "id": "egreso_NOMBRE_DIAGNOSTICO_EGRESO", "label": "NOMBRE_DIAGNOSTICO_EGRESO", "shape": "dot", "size": 6, "title": "Columna 13 del archivo de egresos"}, {"color": "aqua", "id": "egreso_CODIGO_DIAGNOSTICO_EGRESO", "label": "CODIGO_DIAGNOSTICO_EGRESO", "shape": "dot", "size": 6, "title": "Columna 14 del archivo de egresos"}, {"color": "aqua", "id": "egreso_TIPO", "label": "TIPO", "shape": "dot", "size": 6, "title": "Columna 15 del archivo de egresos"}, {"color": "pink", "id": "Renombrado_egreso", "label": "Renombrado_egreso", "shape": "dot", "size": 21, "title": "Se renombran las columnas del archivo de egresos para que coincidan con el esquema de\ncapital_sendas, y se crea FECHA_FACT como copia de FEC_SERVICIO (FECHA_EGRESO renombrada).\nSEDE_INGRESO->SEDE_NOMBRE, NUMERO INGRESO->INGRESO, DOCUMENTO PACIENTE->DOC_PACIENTE,\nAÑOS->EDAD, COD AREA SERVICIO SUBGRUPO->SERVICIO, NOMBRE AREA SERVICIO SUBGRUPO->NOM_SERVICIO_PRODUCTO,\nFECHA_EGRESO->FEC_SERVICIO (y FECHA_FACT), TIEMPO_ESTANCIA_DIAS_CAMA->CANT_SERVICIO,\nCODIGO_RESPONSABLE->COD_ENTIDAD1, NOMBRE_RESPONSABLE->NOM_ENTIDAD1,\nNOMBRE_DIAGNOSTICO_EGRESO->DX_PRINCIPAL.0, CODIGO_DIAGNOSTICO_EGRESO->DX_PRINCIPAL.1, TIPO->tipologia.\nNota: estos registros de egreso no traen FACTURA, solo INGRESO."}, {"color": "pink", "id": "Mapeo_tipologia_hospitalizacion", "label": "Mapeo_tipologia_hospitalizacion", "shape": "dot", "size": 15, "title": "Traduce el texto de TIPO/tipologia del archivo de egresos a los codigos de capitacion:\nHOSPITALIZACION MEDICINA GENERAL -> H1\nHOSPITALIZACION GINECOLOGIA Y OBSTETRICIA -> H2\nHOSPITALIZACION MEDICINA INTERNA -> H3\nHOSPITALIZACION PEDIATRIA -> H4\nUNIDAD DE RECIEN NACIDOS BASICO -> H4\nHOSPITALIZACION QUIRURGICO -> H5\nSolo las filas que quedan en H1-H5 se concatenan a capital_sendas."}, {"color": "yellow", "id": "capital_sendas", "label": "capital_sendas", "shape": "dot", "size": 33, "title": "Tabla resultante del procesamiento (capital_sendas.xlsx). Se arma con las filas de produccion\nfiltradas por PGP/no-SN, mas las filas de egreso mapeadas a tipologia H1-H5, y luego se le\naplican las reglas de validacion por tipologia."}, {"color": "aqua", "id": "capital_sendas_SEDE_NOMBRE", "label": "SEDE_NOMBRE", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_FACTURA", "label": "FACTURA", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_FECHA_FACT", "label": "FECHA_FACT", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_INGRESO", "label": "INGRESO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_GENERO", "label": "GENERO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_CANT_SERVICIO", "label": "CANT_SERVICIO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_COD_PLAN", "label": "COD_PLAN", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_NOM_PLAN", "label": "NOM_PLAN", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_COD_ENTIDAD1", "label": "COD_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_NOM_ENTIDAD1", "label": "NOM_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_AMBITO", "label": "AMBITO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_DX_PRINCIPAL.0", "label": "DX_PRINCIPAL.0", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_DX_PRINCIPAL.1", "label": "DX_PRINCIPAL.1", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_VALOR_TOTAL", "label": "VALOR_TOTAL", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_DOC_PACIENTE", "label": "DOC_PACIENTE", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_NOMBRE_PACIENTE", "label": "NOMBRE_PACIENTE", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_FEC_NACIMIENTO", "label": "FEC_NACIMIENTO", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_EDAD", "label": "EDAD", "shape": "dot", "size": 6, "title": "Columna proveniente de produccion"}, {"color": "aqua", "id": "capital_sendas_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_GRUPO QX", "label": "GRUPO QX", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_EDAD 1", "label": "EDAD 1", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_EDAD 2", "label": "EDAD 2", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_tipologia", "label": "tipologia", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_TIPOLOGIA NOMBRE", "label": "TIPOLOGIA NOMBRE", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_ips", "label": "ips", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "aqua", "id": "capital_sendas_validacion", "label": "validacion", "shape": "dot", "size": 9, "title": "Columna calculada / agregada"}, {"color": "pink", "id": "Calculo_EDAD_1", "label": "Calculo_EDAD_1", "shape": "dot", "size": 9, "title": "(FEC_SERVICIO - FEC_NACIMIENTO).apply(lambda x:\n x.days // 365 si x.days >= 365, si no x.days // 30 si x.days >= 30, si no x.days)\nSe calcula tanto para las filas de produccion como para las de egreso."}, {"color": "pink", "id": "Calculo_EDAD_2", "label": "Calculo_EDAD_2", "shape": "dot", "size": 9, "title": "(FEC_SERVICIO - FEC_NACIMIENTO).apply(lambda x:\n 'Años' si x.days >= 365, 'Meses' si x.days >= 30, si no 'Dias')"}, {"color": "yellow", "id": "Codigos_consulta", "label": "Codigos_consulta", "shape": "dot", "size": 15, "title": "Archivo externo 'Codigos consultas' descargado de OneDrive."}, {"color": "aqua", "id": "Codigos_consulta_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "Codigos_consulta_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Codigos_consulta_GRUPO QX", "label": "GRUPO QX", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "lime", "id": "Condicion_igual_servicio", "label": "Condicion_igual_servicio", "shape": "dot", "size": 12, "title": "SERVICIO es igual entre capital_sendas y Codigos_consulta (merge how='left', sin duplicados)"}, {"color": "yellow", "id": "Codigo_tipologia", "label": "Codigo_tipologia", "shape": "dot", "size": 18, "title": "Archivo externo 'Codigo tipologia' descargado de OneDrive.\nSe excluyen las filas H1 a H5 antes de cruzar (esas llegan por el archivo de egresos)."}, {"color": "aqua", "id": "Codigo_tipologia_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Codigo_tipologia_tipologia", "label": "tipologia", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Codigo_tipologia_nombre_tipologia", "label": "nombre_tipologia", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Codigo_tipologia_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 6, "title": "Columna 5"}, {"color": "lime", "id": "Condicion_igual_servicio_2", "label": "Condicion_igual_servicio_2", "shape": "dot", "size": 12, "title": "SERVICIO es igual entre capital_sendas y Codigo_tipologia (excluyendo tipologias H1-H5,\nque se cargan desde el archivo de egresos), se toma la primera coincidencia por SERVICIO."}, {"color": "yellow", "id": "Anexos", "label": "Anexos", "shape": "dot", "size": 18, "title": "Archivo externo 'Anexos Capital Salud unificados 2023' descargado de OneDrive."}, {"color": "aqua", "id": "Anexos_CUPS", "label": "CUPS", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "Anexos_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Anexos_OBSERVACIONES", "label": "OBSERVACIONES", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Anexos_TIPOLOGIA NOMBRE", "label": "TIPOLOGIA NOMBRE", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Anexos_CODIGOS_ANEXOS", "label": "CODIGOS_ANEXOS", "shape": "dot", "size": 6, "title": "Columna 5"}, {"color": "aqua", "id": "Anexos_TARIFA_CONTRATADA", "label": "TARIFA_CONTRATADA", "shape": "dot", "size": 6, "title": "Columna 6"}, {"color": "lime", "id": "Condicion_igual_cups", "label": "Condicion_igual_cups", "shape": "dot", "size": 9, "title": "SERVICIO (capital_sendas) es igual a CUPS (Anexos)"}, {"color": "pink", "id": "Calculo_TIPOLOGIA_NOMBRE", "label": "Calculo_TIPOLOGIA_NOMBRE", "shape": "dot", "size": 15, "title": "Revisa si hay una fila cuyo TIPOLOGIA NOMBRE contenga 'PEDIATRIA' y EDAD < 14, en ese caso\nasigna ese valor; si no, revisa si contiene 'GINECOLOGIA' y GENERO = 'F', en ese caso lo asigna;\nsi no, toma la primera fila cuyo TIPOLOGIA NOMBRE no contenga 'PEDIATRIA' ni 'GINECOLOGIA';\nde lo contrario asigna vacio (esas filas se descartan)."}, {"color": "yellow", "id": "bases_norte", "label": "bases_norte", "shape": "dot", "size": 9, "title": "Archivo externo 'bases_norte' descargado de OneDrive, con la IPS asignada por documento."}, {"color": "aqua", "id": "bases_norte_documento", "label": "documento", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "bases_norte_ips", "label": "ips", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "lime", "id": "Condicion_igual_documento", "label": "Condicion_igual_documento", "shape": "dot", "size": 9, "title": "DOC_PACIENTE (capital_sendas) es igual a documento (bases_norte), se toma la primera\ncoincidencia por documento."}, {"color": "yellow", "id": "comprobar", "label": "comprobar.csv", "shape": "dot", "size": 15, "title": "Archivo secundario con los pacientes de capital_sendas que quedaron SIN ips (no encontrados\nen bases_norte), para revision manual."}, {"color": "pink", "id": "Separar_nombres", "label": "Separar_nombres", "shape": "dot", "size": 12, "title": "Funcion separar_nombres: separa NOMBRE_PACIENTE en nombre1, nombre2, apellido1, apellido2,\nuniendo particulas como 'DE', 'DEL', 'LA', 'LOS' al nombre/apellido siguiente."}, {"color": "red", "id": "Regla_C1_ambulatorio", "label": "Regla_C1_ambulatorio", "shape": "dot", "size": 15, "title": "tipologia C1: filtra COD_PLAN que comience por 'PGP', elimina duplicados de\nDOC_PACIENTE + FEC_SERVICIO (max 1 por dia por paciente) y pone validacion = 1."}, {"color": "red", "id": "Regla_C4_consulta_externa", "label": "Regla_C4_consulta_externa", "shape": "dot", "size": 21, "title": "tipologia C4 y AMBITO = CONSULTA EXTERNA:\n - validacion = 1 para todos los SERVICIO, excepto 890502.\n - SERVICIO = 890502: validacion = CANT_SERVICIO.\n - Si la FACTURA contiene el servicio 132P01: los servicios 890285, 890385, 890384,\n   890284 y 890502 quedan con validacion = 0."}, {"color": "red", "id": "Regla_C7", "label": "Regla_C7", "shape": "dot", "size": 9, "title": "tipologia C7: validacion = CANT_SERVICIO para todos los registros."}, {"color": "red", "id": "Regla_C8_consulta_externa", "label": "Regla_C8_consulta_externa", "shape": "dot", "size": 9, "title": "tipologia C8 y AMBITO = CONSULTA EXTERNA: validacion = CANT_SERVICIO."}, {"color": "red", "id": "Regla_hospital_dia", "label": "Regla_hospital_dia", "shape": "dot", "size": 9, "title": "tipologia HD: validacion = 1 para cada registro."}, {"color": "red", "id": "Regla_atencion_renal_integral", "label": "Regla_atencion_renal_integral", "shape": "dot", "size": 9, "title": "tipologia ARI: validacion = 1 para cada registro."}, {"color": "red", "id": "Regla_urgencias_medicas", "label": "Regla_urgencias_medicas", "shape": "dot", "size": 21, "title": "tipologia C5 (consultorio urgencias): por defecto validacion = 0.\nSe ordenan los registros por DOC_PACIENTE, DX_PRINCIPAL.1 y FEC_SERVICIO, y se deja\nsolo el primer registro por INGRESO. Funcion validacion_C5: dentro de cada grupo\nDOC_PACIENTE + DX_PRINCIPAL.1, se marca validacion = 1 en el primer registro y en\ncualquier registro posterior con mas de 3 dias de diferencia respecto al ultimo marcado."}, {"color": "red", "id": "Regla_quirofano", "label": "Regla_quirofano", "shape": "dot", "size": 18, "title": "tipologia comienza por 'Qx' (grupo quirurgico) y VALOR_TOTAL > 0. Por cada grupo de\nFACTURA + FEC_SERVICIO, ordenado por tipologia descendente: se cobran maximo 3 registros,\nmaximo 2 del mayor grupo quirurgico y 1 del siguiente mayor grupo (funcion validacion_Qx)."}, {"color": "red", "id": "Regla_quirofano_basico_parto_y_cesarea", "label": "Regla_quirofano_basico_parto_y_cesarea", "shape": "dot", "size": 15, "title": "tipologia Qx1: por cada grupo FACTURA + SERVICIO (ordenado), se marca validacion = 1\nsolo en el primer registro del grupo; el resto queda en 0."}, {"color": "red", "id": "Regla_resonancia_nuclear_magnetica", "label": "Regla_resonancia_nuclear_magnetica", "shape": "dot", "size": 12, "title": "tipologia RM: validacion = CANT_SERVICIO."}, {"color": "red", "id": "Regla_egreso_hospitalizacion", "label": "Regla_egreso_hospitalizacion", "shape": "dot", "size": 18, "title": "tipologia comienza por 'H':\n - H1 a H5 (provienen del archivo de egresos): validacion = 1 para cada registro.\n - Otros H* (provienen de produccion via Codigo_tipologia): se eliminan duplicados de\n   FACTURA + SERVICIO (se cobra solo 1 por grupo) y validacion = 1."}, {"color": "pink", "id": "Inicializa_validacion", "label": "Inicializa_validacion", "shape": "dot", "size": 9, "title": "Se crea la columna 'validacion' con valor 0 para todos los registros, antes de aplicar\ncada una de las reglas por tipologia."}];
+const rawEdges = [{"arrows": "to", "from": "produccion_SEDE_NOMBRE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FECHA_FACT", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_INGRESO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOMBRE_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FEC_NACIMIENTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_GENERO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_EDAD", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_CANT_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_VALOR_TOTAL", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_PLAN", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_PLAN", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_ENTIDAD1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_ENTIDAD1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_AMBITO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL.0", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL.1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_PLAN", "title": "CUMPLE", "to": "Filtro_PGP_no_SN"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "CUMPLE", "to": "Filtro_PGP_no_SN"}, {"arrows": "to", "from": "Filtro_PGP_no_SN", "title": "FILTRA", "to": "produccion"}, {"arrows": "to", "from": "Seleccion_archivo_mes", "title": "SELECCIONA_ARCHIVO", "to": "produccion"}, {"arrows": "to", "from": "Concatenacion_sin_duplicados", "title": "CONCATENA", "to": "produccion"}, {"arrows": "to", "from": "produccion_FECHA_FACT", "title": "CUMPLE", "to": "Filtro_mes_facturacion"}, {"arrows": "to", "from": "egreso_SEDE_INGRESO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_NUMERO INGRESO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_DOCUMENTO PACIENTE", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_FEC_NACIMIENTO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_GENERO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_AÑOS", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_COD AREA SERVICIO SUBGRUPO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_NOMBRE AREA SERVICIO SUBGRUPO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_FECHA_EGRESO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_TIEMPO_ESTANCIA_DIAS_CAMA", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_CODIGO_RESPONSABLE", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_NOMBRE_RESPONSABLE", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_NOMBRE_DIAGNOSTICO_EGRESO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_CODIGO_DIAGNOSTICO_EGRESO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "egreso_TIPO", "title": "CAMPO_DE", "to": "egreso"}, {"arrows": "to", "from": "Seleccion_archivo_mes", "title": "SELECCIONA_ARCHIVO", "to": "egreso"}, {"arrows": "to", "from": "egreso_FECHA_EGRESO", "title": "CUMPLE", "to": "Filtro_mes_facturacion"}, {"arrows": "to", "from": "egreso_SEDE_INGRESO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_NUMERO INGRESO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_DOCUMENTO PACIENTE", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_FEC_NACIMIENTO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_GENERO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_AÑOS", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_COD AREA SERVICIO SUBGRUPO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_NOMBRE AREA SERVICIO SUBGRUPO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_FECHA_EGRESO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_TIEMPO_ESTANCIA_DIAS_CAMA", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_CODIGO_RESPONSABLE", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_NOMBRE_RESPONSABLE", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_NOMBRE_DIAGNOSTICO_EGRESO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_CODIGO_DIAGNOSTICO_EGRESO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "egreso_TIPO", "title": "RENOMBRADO_A", "to": "Renombrado_egreso"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "CALCULA_A", "to": "Mapeo_tipologia_hospitalizacion"}, {"arrows": "to", "from": "capital_sendas_SEDE_NOMBRE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_SEDE_NOMBRE", "title": "COPIADO_A", "to": "capital_sendas_SEDE_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "COPIADO_A", "to": "capital_sendas_FACTURA"}, {"arrows": "to", "from": "capital_sendas_FECHA_FACT", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FECHA_FACT", "title": "COPIADO_A", "to": "capital_sendas_FECHA_FACT"}, {"arrows": "to", "from": "capital_sendas_INGRESO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_INGRESO", "title": "COPIADO_A", "to": "capital_sendas_INGRESO"}, {"arrows": "to", "from": "capital_sendas_GENERO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_GENERO", "title": "COPIADO_A", "to": "capital_sendas_GENERO"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_SERVICIO_PRODUCTO", "title": "COPIADO_A", "to": "capital_sendas_NOM_SERVICIO_PRODUCTO"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_FEC_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_CANT_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_CANT_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_CANT_SERVICIO"}, {"arrows": "to", "from": "capital_sendas_COD_PLAN", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_COD_PLAN", "title": "COPIADO_A", "to": "capital_sendas_COD_PLAN"}, {"arrows": "to", "from": "capital_sendas_NOM_PLAN", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_PLAN", "title": "COPIADO_A", "to": "capital_sendas_NOM_PLAN"}, {"arrows": "to", "from": "capital_sendas_COD_ENTIDAD1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_COD_ENTIDAD1", "title": "COPIADO_A", "to": "capital_sendas_COD_ENTIDAD1"}, {"arrows": "to", "from": "capital_sendas_NOM_ENTIDAD1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_ENTIDAD1", "title": "COPIADO_A", "to": "capital_sendas_NOM_ENTIDAD1"}, {"arrows": "to", "from": "capital_sendas_AMBITO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_AMBITO", "title": "COPIADO_A", "to": "capital_sendas_AMBITO"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL.0", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL.0", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL.0"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL.1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL.1", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL.1"}, {"arrows": "to", "from": "capital_sendas_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_CENTROCOS", "title": "COPIADO_A", "to": "capital_sendas_NOM_CENTROCOS"}, {"arrows": "to", "from": "capital_sendas_VALOR_TOTAL", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_VALOR_TOTAL", "title": "COPIADO_A", "to": "capital_sendas_VALOR_TOTAL"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "COPIADO_A", "to": "capital_sendas_DOC_PACIENTE"}, {"arrows": "to", "from": "capital_sendas_NOMBRE_PACIENTE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOMBRE_PACIENTE", "title": "COPIADO_A", "to": "capital_sendas_NOMBRE_PACIENTE"}, {"arrows": "to", "from": "capital_sendas_FEC_NACIMIENTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FEC_NACIMIENTO", "title": "COPIADO_A", "to": "capital_sendas_FEC_NACIMIENTO"}, {"arrows": "to", "from": "capital_sendas_EDAD", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_EDAD", "title": "COPIADO_A", "to": "capital_sendas_EDAD"}, {"arrows": "to", "from": "capital_sendas_CONCEPTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GRUPO QX", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD 1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD 2", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_TIPOLOGIA NOMBRE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ips", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_validacion", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_SEDE_NOMBRE"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_INGRESO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_DOC_PACIENTE"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_FEC_NACIMIENTO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_GENERO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_EDAD"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_SERVICIO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_NOM_SERVICIO_PRODUCTO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_FEC_SERVICIO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_FECHA_FACT"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_CANT_SERVICIO"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_COD_ENTIDAD1"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_NOM_ENTIDAD1"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL.0"}, {"arrows": "to", "from": "Renombrado_egreso", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL.1"}, {"arrows": "to", "from": "Mapeo_tipologia_hospitalizacion", "title": "CALCULA_A", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "capital_sendas_FEC_NACIMIENTO", "title": "CALCULA_A", "to": "Calculo_EDAD_1"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CALCULA_A", "to": "Calculo_EDAD_1"}, {"arrows": "to", "from": "capital_sendas_FEC_NACIMIENTO", "title": "CALCULA_A", "to": "Calculo_EDAD_2"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CALCULA_A", "to": "Calculo_EDAD_2"}, {"arrows": "to", "from": "Calculo_EDAD_1", "title": "CALCULA_A", "to": "capital_sendas_EDAD 1"}, {"arrows": "to", "from": "Calculo_EDAD_2", "title": "CALCULA_A", "to": "capital_sendas_EDAD 2"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO QX", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_GRUPO QX"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "COPIADO_A", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO QX", "title": "COPIADO_A", "to": "capital_sendas_GRUPO QX"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_nombre_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "Condicion_igual_servicio_2", "title": "CUMPLE", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "COPIADO_A", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_SERVICIO", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_OBSERVACIONES", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA NOMBRE", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_CODIGOS_ANEXOS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TARIFA_CONTRATADA", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "Condicion_igual_cups", "title": "CUMPLE", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA NOMBRE", "title": "COPIADO_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_GENERO", "title": "CALCULA_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_EDAD", "title": "CALCULA_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "Calculo_TIPOLOGIA_NOMBRE", "title": "CALCULA_A", "to": "capital_sendas_TIPOLOGIA NOMBRE"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "bases_norte_ips", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "Condicion_igual_documento", "title": "CUMPLE", "to": "capital_sendas_ips"}, {"arrows": "to", "from": "bases_norte_ips", "title": "COPIADO_A", "to": "capital_sendas_ips"}, {"arrows": "to", "from": "Condicion_igual_documento", "title": "SIN_COINCIDENCIA", "to": "comprobar"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE", "title": "CAMPO_DE", "to": "comprobar"}, {"arrows": "to", "from": "capital_sendas_NOMBRE_PACIENTE", "title": "CALCULA_A", "to": "Separar_nombres"}, {"arrows": "to", "from": "Separar_nombres", "title": "CALCULA_A", "to": "comprobar"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_C1_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_COD_PLAN", "title": "AGRUPADO", "to": "Regla_C1_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE", "title": "AGRUPADO", "to": "Regla_C1_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "AGRUPADO", "to": "Regla_C1_ambulatorio"}, {"arrows": "to", "from": "Regla_C1_ambulatorio", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_C4_consulta_externa"}, {"arrows": "to", "from": "capital_sendas_AMBITO", "title": "AGRUPADO", "to": "Regla_C4_consulta_externa"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "AGRUPADO", "to": "Regla_C4_consulta_externa"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_C4_consulta_externa"}, {"arrows": "to", "from": "Regla_C4_consulta_externa", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_C7"}, {"arrows": "to", "from": "Regla_C7", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_C8_consulta_externa"}, {"arrows": "to", "from": "capital_sendas_AMBITO", "title": "AGRUPADO", "to": "Regla_C8_consulta_externa"}, {"arrows": "to", "from": "Regla_C8_consulta_externa", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_hospital_dia"}, {"arrows": "to", "from": "Regla_hospital_dia", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_atencion_renal_integral"}, {"arrows": "to", "from": "Regla_atencion_renal_integral", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_DOC_PACIENTE", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL.1", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_INGRESO", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "Regla_urgencias_medicas", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_VALOR_TOTAL", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "Regla_quirofano", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "Regla_quirofano_basico_parto_y_cesarea", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_resonancia_nuclear_magnetica"}, {"arrows": "to", "from": "capital_sendas_CANT_SERVICIO", "title": "AGRUPADO", "to": "Regla_resonancia_nuclear_magnetica"}, {"arrows": "to", "from": "Regla_resonancia_nuclear_magnetica", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_egreso_hospitalizacion"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_egreso_hospitalizacion"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "AGRUPADO", "to": "Regla_egreso_hospitalizacion"}, {"arrows": "to", "from": "capital_sendas_NOM_CENTROCOS", "title": "AGRUPADO", "to": "Regla_egreso_hospitalizacion"}, {"arrows": "to", "from": "Regla_egreso_hospitalizacion", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Inicializa_validacion", "title": "CALCULA_A", "to": "capital_sendas_validacion"}];
 
-             
-             #loadingBar {
-                 position:absolute;
-                 top:0px;
-                 left:0px;
-                 width: 100%;
-                 height: 750px;
-                 background-color:rgba(200,200,200,0.8);
-                 -webkit-transition: all 0.5s ease;
-                 -moz-transition: all 0.5s ease;
-                 -ms-transition: all 0.5s ease;
-                 -o-transition: all 0.5s ease;
-                 transition: all 0.5s ease;
-                 opacity:1;
-             }
+const nodes = new vis.DataSet(rawNodes);
+const edges = new vis.DataSet(rawEdges);
 
-             #bar {
-                 position:absolute;
-                 top:0px;
-                 left:0px;
-                 width:20px;
-                 height:20px;
-                 margin:auto auto auto auto;
-                 border-radius:11px;
-                 border:2px solid rgba(30,30,30,0.05);
-                 background: rgb(0, 173, 246); /* Old browsers */
-                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
-             }
+const container = document.getElementById('mynetwork');
+const data = { nodes: nodes, edges: edges };
+const options = {
+  nodes: { shape: 'dot', font: { size: 12 } },
+  edges: {
+    arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+    font: { size: 9, align: 'middle', strokeWidth: 0, color: '#666' },
+    color: { color: '#c9c9c9', highlight: '#333333' },
+    smooth: { type: 'dynamic' }
+  },
+  interaction: { hover: true, tooltipDelay: 150, zoomView: true, navigationButtons: true, keyboard: true },
+  physics: {
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: { gravitationalConstant: -60, springLength: 90, springConstant: 0.06, damping: 0.4 },
+    stabilization: { iterations: 200 }
+  },
+  layout: { improvedLayout: true }
+};
 
-             #border {
-                 position:absolute;
-                 top:10px;
-                 left:10px;
-                 width:500px;
-                 height:23px;
-                 margin:auto auto auto auto;
-                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
-                 border-radius:10px;
-             }
+const network = new vis.Network(container, data, options);
 
-             #text {
-                 position:absolute;
-                 top:8px;
-                 left:530px;
-                 width:30px;
-                 height:50px;
-                 margin:auto auto auto auto;
-                 font-size:22px;
-                 color: #000000;
-             }
+const estado = document.getElementById('estado');
+network.once('stabilizationIterationsDone', function () {
+  estado.textContent = 'Grafo listo: ' + nodes.length + ' nodos, ' + edges.length + ' relaciones.';
+});
+network.on('stabilizationProgress', function (params) {
+  const pct = Math.round((params.iterations / params.total) * 100);
+  estado.textContent = 'Calculando distribucion... ' + pct + '%';
+});
 
-             div.outerBorder {
-                 position:relative;
-                 top:400px;
-                 width:600px;
-                 height:44px;
-                 margin:auto auto auto auto;
-                 border:8px solid rgba(0,0,0,0.1);
-                 background: rgb(252,252,252); /* Old browsers */
-                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
-                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
-                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
-                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
-                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
-                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
-                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
-                 border-radius:72px;
-                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
-             }
-             
+// --- resaltado de vecinos al hacer clic ---
+const allNodeIds = nodes.getIds();
+const originalNodeColors = {};
+allNodeIds.forEach(function (id) {
+  const n = nodes.get(id);
+  originalNodeColors[id] = n.color;
+});
 
-             
+function limpiarResaltado() {
+  const updates = allNodeIds.map(function (id) {
+    return { id: id, color: originalNodeColors[id], opacity: 1, font: { color: '#000000' } };
+  });
+  nodes.update(updates);
+  const edgeUpdates = edges.getIds().map(function (id) {
+    return { id: id, color: { color: '#c9c9c9' }, width: 1 };
+  });
+  edges.update(edgeUpdates);
+}
 
-             
-        </style>
-    </head>
+network.on('selectNode', function (params) {
+  if (params.nodes.length === 0) return;
+  const selected = params.nodes[0];
+  const connected = network.getConnectedNodes(selected);
+  const connectedSet = new Set(connected);
+  connectedSet.add(selected);
 
+  const nodeUpdates = allNodeIds.map(function (id) {
+    if (connectedSet.has(id)) {
+      return { id: id, color: originalNodeColors[id], opacity: 1 };
+    }
+    return { id: id, color: { background: '#eeeeee', border: '#dddddd' }, opacity: 0.35 };
+  });
+  nodes.update(nodeUpdates);
 
-    <body>
-        <div class="card" style="width: 100%">
-            
-                <div id="select-menu" class="card-header">
-                    <div class="row no-gutters">
-                        <div class="col-10 pb-2">
-                            <select
-                            class="form-select"
-                            aria-label="Default select example"
-                            onchange="selectNode([value]);"
-                            id="select-node"
-                            placeholder="Select node..."
-                            >
-                                <option selected>Select a Node by ID</option>
-                                
-                                    <option value="produccion_SEDE">produccion_SEDE</option>
-                                
-                                    <option value="produccion">produccion</option>
-                                
-                                    <option value="produccion_SEDE_NOMBRE">produccion_SEDE_NOMBRE</option>
-                                
-                                    <option value="capital_sendas_SEDE_NOMBRE">capital_sendas_SEDE_NOMBRE</option>
-                                
-                                    <option value="produccion_FACTURA">produccion_FACTURA</option>
-                                
-                                    <option value="capital_sendas_FACTURA">capital_sendas_FACTURA</option>
-                                
-                                    <option value="Regla_ambulatorio">Regla_ambulatorio</option>
-                                
-                                    <option value="produccion_FECHA_FACT">produccion_FECHA_FACT</option>
-                                
-                                    <option value="capital_sendas_FECHA_FACT">capital_sendas_FECHA_FACT</option>
-                                
-                                    <option value="produccion_TIPO_FACTURA">produccion_TIPO_FACTURA</option>
-                                
-                                    <option value="produccion_INGRESO">produccion_INGRESO</option>
-                                
-                                    <option value="capital_sendas_INGRESO">capital_sendas_INGRESO</option>
-                                
-                                    <option value="produccion_FEC_INGRESO">produccion_FEC_INGRESO</option>
-                                
-                                    <option value="produccion_COD_USU_FACTURADOR">produccion_COD_USU_FACTURADOR</option>
-                                
-                                    <option value="produccion_NOM_FACTURADOR">produccion_NOM_FACTURADOR</option>
-                                
-                                    <option value="produccion_DOC_PACIENTE">produccion_DOC_PACIENTE</option>
-                                
-                                    <option value="Condicion_igual_documento">Condicion_igual_documento</option>
-                                
-                                    <option value="Regla_urgencias_medicas">Regla_urgencias_medicas</option>
-                                
-                                    <option value="produccion_PACTIPDOC">produccion_PACTIPDOC</option>
-                                
-                                    <option value="produccion_TIPO_DOC">produccion_TIPO_DOC</option>
-                                
-                                    <option value="produccion_ESTADO_PAC">produccion_ESTADO_PAC</option>
-                                
-                                    <option value="produccion_NOMBRE_PACIENTE">produccion_NOMBRE_PACIENTE</option>
-                                
-                                    <option value="produccion_COD_PACIENTE">produccion_COD_PACIENTE</option>
-                                
-                                    <option value="produccion_FEC_NACIMIENTO">produccion_FEC_NACIMIENTO</option>
-                                
-                                    <option value="Calculo_EDAD_1">Calculo_EDAD_1</option>
-                                
-                                    <option value="Calculo_EDAD_2">Calculo_EDAD_2</option>
-                                
-                                    <option value="produccion_GENERO">produccion_GENERO</option>
-                                
-                                    <option value="capital_sendas_GENERO">capital_sendas_GENERO</option>
-                                
-                                    <option value="Calculo_TIPOLOGIA_NOMBRE">Calculo_TIPOLOGIA_NOMBRE</option>
-                                
-                                    <option value="produccion_EDAD">produccion_EDAD</option>
-                                
-                                    <option value="produccion_ESTRATO">produccion_ESTRATO</option>
-                                
-                                    <option value="produccion_NOM_ESTRATO">produccion_NOM_ESTRATO</option>
-                                
-                                    <option value="produccion_VALOR_ENTIDAD">produccion_VALOR_ENTIDAD</option>
-                                
-                                    <option value="produccion_VALOR_PACIENTE">produccion_VALOR_PACIENTE</option>
-                                
-                                    <option value="produccion_SERVICIO">produccion_SERVICIO</option>
-                                
-                                    <option value="capital_sendas_SERVICIO">capital_sendas_SERVICIO</option>
-                                
-                                    <option value="Condicion_igual_cups">Condicion_igual_cups</option>
-                                
-                                    <option value="produccion_CUMS">produccion_CUMS</option>
-                                
-                                    <option value="produccion_PRODUCTO">produccion_PRODUCTO</option>
-                                
-                                    <option value="produccion_NOM_SERVICIO_PRODUCTO">produccion_NOM_SERVICIO_PRODUCTO</option>
-                                
-                                    <option value="capital_sendas_NOM_SERVICIO_PRODUCTO">capital_sendas_NOM_SERVICIO_PRODUCTO</option>
-                                
-                                    <option value="produccion_FEC_SERVICIO">produccion_FEC_SERVICIO</option>
-                                
-                                    <option value="capital_sendas_FEC_SERVICIO">capital_sendas_FEC_SERVICIO</option>
-                                
-                                    <option value="produccion_CANT_SERVICIO">produccion_CANT_SERVICIO</option>
-                                
-                                    <option value="capital_sendas_CANT_SERVICIO">capital_sendas_CANT_SERVICIO</option>
-                                
-                                    <option value="produccion_VALOR_UNITARIO">produccion_VALOR_UNITARIO</option>
-                                
-                                    <option value="produccion_VALOR_TOTAL">produccion_VALOR_TOTAL</option>
-                                
-                                    <option value="Regla_quirofano">Regla_quirofano</option>
-                                
-                                    <option value="produccion_COD_PLAN">produccion_COD_PLAN</option>
-                                
-                                    <option value="capital_sendas_COD_PLAN">capital_sendas_COD_PLAN</option>
-                                
-                                    <option value="produccion_NOM_PLAN">produccion_NOM_PLAN</option>
-                                
-                                    <option value="capital_sendas_NOM_PLAN">capital_sendas_NOM_PLAN</option>
-                                
-                                    <option value="produccion_COD_MEDICO">produccion_COD_MEDICO</option>
-                                
-                                    <option value="produccion_NOM_MEDICO">produccion_NOM_MEDICO</option>
-                                
-                                    <option value="produccion_CENTRO_DE_COSTO">produccion_CENTRO_DE_COSTO</option>
-                                
-                                    <option value="produccion_NOM_CENTROCOS">produccion_NOM_CENTROCOS</option>
-                                
-                                    <option value="produccion_SIPCODCUP">produccion_SIPCODCUP</option>
-                                
-                                    <option value="produccion_COD_ENTIDAD1">produccion_COD_ENTIDAD1</option>
-                                
-                                    <option value="capital_sendas_COD_ENTIDAD1">capital_sendas_COD_ENTIDAD1</option>
-                                
-                                    <option value="produccion_NOM_ENTIDAD1">produccion_NOM_ENTIDAD1</option>
-                                
-                                    <option value="capital_sendas_NOM_ENTIDAD1">capital_sendas_NOM_ENTIDAD1</option>
-                                
-                                    <option value="produccion_NUM_EGRESO">produccion_NUM_EGRESO</option>
-                                
-                                    <option value="produccion_CODIGO_CUMS">produccion_CODIGO_CUMS</option>
-                                
-                                    <option value="produccion_GMETIPMED">produccion_GMETIPMED</option>
-                                
-                                    <option value="produccion_SFATIPDOC">produccion_SFATIPDOC</option>
-                                
-                                    <option value="produccion_PRODUCTO_SERVICIO">produccion_PRODUCTO_SERVICIO</option>
-                                
-                                    <option value="produccion_AMBITO">produccion_AMBITO</option>
-                                
-                                    <option value="capital_sendas_AMBITO">capital_sendas_AMBITO</option>
-                                
-                                    <option value="produccion_DX_PRINCIPAL_0">produccion_DX_PRINCIPAL_0</option>
-                                
-                                    <option value="capital_sendas_DX_PRINCIPAL_0">capital_sendas_DX_PRINCIPAL_0</option>
-                                
-                                    <option value="produccion_DX_PRINCIPAL_1">produccion_DX_PRINCIPAL_1</option>
-                                
-                                    <option value="capital_sendas_DX_PRINCIPAL_1">capital_sendas_DX_PRINCIPAL_1</option>
-                                
-                                    <option value="capital_sendas">capital_sendas</option>
-                                
-                                    <option value="Regla_egreso">Regla_egreso</option>
-                                
-                                    <option value="Regla_hospital_dia">Regla_hospital_dia</option>
-                                
-                                    <option value="Regla_atencion_renal_integral">Regla_atencion_renal_integral</option>
-                                
-                                    <option value="Regla_quirofano_basico_parto_y_cesarea">Regla_quirofano_basico_parto_y_cesarea</option>
-                                
-                                    <option value="Regla_resonancia_nuclear_magnetica">Regla_resonancia_nuclear_magnetica</option>
-                                
-                                    <option value="Condicion_igual_servicio">Condicion_igual_servicio</option>
-                                
-                                    <option value="Condicion_igual_servicio_2">Condicion_igual_servicio_2</option>
-                                
-                                    <option value="capital_sendas_CONCEPTO">capital_sendas_CONCEPTO</option>
-                                
-                                    <option value="capital_sendas_GRUPO_QX">capital_sendas_GRUPO_QX</option>
-                                
-                                    <option value="capital_sendas_EDAD_1">capital_sendas_EDAD_1</option>
-                                
-                                    <option value="capital_sendas_EDAD_2">capital_sendas_EDAD_2</option>
-                                
-                                    <option value="capital_sendas_tipologia">capital_sendas_tipologia</option>
-                                
-                                    <option value="capital_sendas_TIPOLOGIA_NOMBRE">capital_sendas_TIPOLOGIA_NOMBRE</option>
-                                
-                                    <option value="capital_sendas_ips">capital_sendas_ips</option>
-                                
-                                    <option value="capital_sendas_validacion">capital_sendas_validacion</option>
-                                
-                                    <option value="Codigos_consulta_SERVICIO">Codigos_consulta_SERVICIO</option>
-                                
-                                    <option value="Codigos_consulta">Codigos_consulta</option>
-                                
-                                    <option value="Codigos_consulta_CONCEPTO">Codigos_consulta_CONCEPTO</option>
-                                
-                                    <option value="Codigos_consulta_NOM_SERVICIO_PRODUCTO">Codigos_consulta_NOM_SERVICIO_PRODUCTO</option>
-                                
-                                    <option value="Codigos_consulta_GRUPO_QX">Codigos_consulta_GRUPO_QX</option>
-                                
-                                    <option value="Anexos_CUPS">Anexos_CUPS</option>
-                                
-                                    <option value="Anexos">Anexos</option>
-                                
-                                    <option value="Anexos_SERVICIO">Anexos_SERVICIO</option>
-                                
-                                    <option value="Anexos_OBSERVACIONES">Anexos_OBSERVACIONES</option>
-                                
-                                    <option value="Anexos_TIPOLOGIA_NOMBRE">Anexos_TIPOLOGIA_NOMBRE</option>
-                                
-                                    <option value="Anexos_CODIGOS_ANEXOS">Anexos_CODIGOS_ANEXOS</option>
-                                
-                                    <option value="Anexos_TARIFA_CONTRATADA">Anexos_TARIFA_CONTRATADA</option>
-                                
-                                    <option value="Codigo_tipologia_SERVICIO">Codigo_tipologia_SERVICIO</option>
-                                
-                                    <option value="Codigo_tipologia">Codigo_tipologia</option>
-                                
-                                    <option value="Codigo_tipologia_NOM_SERVICIO_PRODUCTO">Codigo_tipologia_NOM_SERVICIO_PRODUCTO</option>
-                                
-                                    <option value="Codigo_tipologia_tipologia">Codigo_tipologia_tipologia</option>
-                                
-                                    <option value="Codigo_tipologia_nombre_tipologia">Codigo_tipologia_nombre_tipologia</option>
-                                
-                                    <option value="Condicion_contiene_PGP">Condicion_contiene_PGP</option>
-                                
-                                    <option value="capital_sendas_NOM_CENTROCOS">capital_sendas_NOM_CENTROCOS</option>
-                                
-                                    <option value="bases_norte_documento">bases_norte_documento</option>
-                                
-                                    <option value="bases_norte">bases_norte</option>
-                                
-                                    <option value="bases_norte_ips">bases_norte_ips</option>
-                                
-                                    <option value="Codigo_tipologia_NOM_CENTROCOS">Codigo_tipologia_NOM_CENTROCOS</option>
-                                
-                                    <option value="(_110 {})">(_110 {})</option>
-                                
-                                    <option value="(_111 {})">(_111 {})</option>
-                                
-                                    <option value="(_112 {})">(_112 {})</option>
-                                
-                            </select>
-                        </div>
-                        <div class="col-2 pb-2">
-                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
-                        </div>
-                    </div>
-                </div>
-            
-            
-              <div id="filter-menu" class="card-header">
-                <div class="row no-gutters">
-                  <div class="col-3 pb-2">
-                    <select
-                            class="form-select"
-                            aria-label="Default select example"
-                            onchange="updateFilter(value, 'item')"
-                            id="select-item"
-                        >
-                        <option value="">Select a network item</option>
-                        <option value="edge">edge</option>
-                        <option value="node">node</option>
-                    </select>
-                  </div>
-                  <div class="col-3 pb-2">
-                    <select
-                            class="form-select"
-                            aria-label="Default select example"
-                            onchange="updateFilter(value, 'property')"
-                            id="select-property"
-                        >
-                        <option value="">Select a property...</option>
-                    </select>
-                  </div>
-                  <div class="col-3 pb-2">
-                    <select
-                            class="form-select"
-                            aria-label="Default select example"
-                            id="select-value"
-                        >
-                        <option value="">Select value(s)...</option>
-                    </select>
-                  </div>
-                  <div class="col-1 pb-2">
-                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
-                  </div>
-                  <div class="col-2 pb-2">
-                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
-                  </div>
-                </div>
-              </div>
-            
-            <div id="mynetwork" class="card-body"></div>
-        </div>
+  const connectedEdges = network.getConnectedEdges(selected);
+  const edgeUpdates = edges.getIds().map(function (id) {
+    if (connectedEdges.includes(id)) {
+      return { id: id, color: { color: '#333333' }, width: 2 };
+    }
+    return { id: id, color: { color: '#eeeeee' }, width: 1 };
+  });
+  edges.update(edgeUpdates);
+});
 
-        
-            <div id="loadingBar">
-              <div class="outerBorder">
-                <div id="text">0%</div>
-                <div id="border">
-                  <div id="bar"></div>
-                </div>
-              </div>
-            </div>
-        
-        
+network.on('deselectNode', limpiarResaltado);
 
-        <script type="text/javascript">
+document.getElementById('btnReset').addEventListener('click', function () {
+  network.unselectAll();
+  limpiarResaltado();
+  network.fit();
+});
 
-              // initialize global variables.
-              var edges;
-              var nodes;
-              var allNodes;
-              var allEdges;
-              var nodeColors;
-              var originalNodes;
-              var network;
-              var container;
-              var options, data;
-              var filter = {
-                  item : '',
-                  property : '',
-                  value : []
-              };
+let fisicaActiva = true;
+document.getElementById('btnFisica').addEventListener('click', function () {
+  fisicaActiva = !fisicaActiva;
+  network.setOptions({ physics: { enabled: fisicaActiva } });
+});
 
-              
-                  new TomSelect("#select-node",{
-                      create: false,
-                      sortField: {
-                          field: "text",
-                          direction: "asc"
-                      }
-                  });
-              
+document.getElementById('btnBuscar').addEventListener('click', buscarNodo);
+document.getElementById('buscar').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') buscarNodo();
+});
 
-              
-                  // explicitly using onItemAdd and this function as we need to save multiple values
-                  let updateValueFilter = function() {
-                      return function () {
-                      filter['value'].push(arguments[0])
-                      }
-                  }
-
-                  let valueControl = new TomSelect("#select-value",{
-                      maxItems: null,
-                      valueField: 'id',
-                      labelField: 'title',
-                      searchField: 'title',
-                      create: false,
-                      sortField: {
-                          field: "text",
-                          direction: "asc"
-                      },
-                      onItemAdd: updateValueFilter()
-                  });
-
-                  let addValues = function() {
-                      return function () {
-                          // clear the current value options and add the selected attribute values
-                          // tom-select handles duplicates
-                          let selectedProperty = arguments[0];
-                          valueControl.clear();
-                          valueControl.clearOptions();
-                          filter['value'] = []
-                          if (filter['item'] === 'node') {
-                              for (let each in allNodes) {
-                                  valueControl.addOption({
-                                      id:allNodes[each][selectedProperty],
-                                      title:allNodes[each][selectedProperty]
-                                  })
-                              }
-                          }
-                          else if (filter['item'] === 'edge') {
-                              for (let each in allEdges) {
-                                  valueControl.addOption({
-                                      id:allEdges[each][selectedProperty],
-                                      title:allEdges[each][selectedProperty]
-                                  })
-                              }
-                          }
-                      }
-                  };
-
-                  let propControl = new TomSelect("#select-property",{
-                      valueField: 'id',
-                      labelField: 'title',
-                      searchField: 'title',
-                      create: false,
-                      sortField: {
-                          field: "text",
-                          direction: "asc"
-                      },
-                      onItemAdd: addValues()
-                  });
-
-                  let addProperties = function() {
-                      return function () {
-                          // loops through the selected network item and adds the attributes to dropdown
-                          // tom-select handles duplicates
-                          clearFilter(false)
-                          if (arguments[0] === 'edge') {
-                              for (let each in allEdges) {
-                                  if (allEdges.hasOwnProperty(each)) {
-                                      for (let eachProp in allEdges[each]) {
-                                          if (allEdges[each].hasOwnProperty(eachProp)) {
-                                              propControl.addOption({id: eachProp, title: eachProp})
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                          else if (arguments[0] === 'node') {
-                              for (let each in allNodes) {
-                                  if (allNodes.hasOwnProperty(each)) {
-                                      for (let eachProp in allNodes[each]) {
-                                          if (allNodes[each].hasOwnProperty(eachProp)
-                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
-                                                  && eachProp !== 'hiddenLabel')) {
-                                              propControl.addOption({id: eachProp, title: eachProp})
-
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      }
-                  };
-
-                  let itemControl = new TomSelect("#select-item",{
-                      create: false,
-                      sortField:{
-                          field: "text",
-                          direction: "asc"
-                      },
-                      onItemAdd: addProperties()
-                  });
-
-                  function clearFilter(reset) {
-                      // utility function to clear all the selected filter options
-                      // if reset is set to true, the existing filter will be removed
-                      // else, only the dropdown options are cleared
-                      propControl.clear();
-                      propControl.clearOptions();
-                      valueControl.clear();
-                      valueControl.clearOptions();
-                      filter = {
-                          item : '',
-                          property : '',
-                          value : []
-                      }
-                      if (reset) {
-                          itemControl.clear();
-                          filterHighlight({nodes: []})
-                      }
-                  }
-
-                  function updateFilter(value, key) {
-                      // key could be 'item' or 'property' and value is as selected in dropdown
-                      filter[key] = value
-                  }
-
-              
-
-              // This method is responsible for drawing the graph, returns the drawn network
-              function drawGraph() {
-                  var container = document.getElementById('mynetwork');
-
-                  
-
-                  // parsing and collecting nodes and edges from the python
-                  nodes = new vis.DataSet([{"color": "aqua", "id": "produccion_SEDE", "label": "SEDE", "shape": "dot", "size": 3, "title": "Columna 1"}, {"color": "yellow", "id": "produccion", "label": "produccion", "shape": "dot", "size": 30, "title": "Reporte generado de DGH"}, {"color": "aqua", "id": "produccion_SEDE_NOMBRE", "label": "SEDE_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "capital_sendas_SEDE_NOMBRE", "label": "SEDE_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "aqua", "id": "produccion_FACTURA", "label": "FACTURA", "shape": "dot", "size": 9, "title": "Columna 3"}, {"color": "aqua", "id": "capital_sendas_FACTURA", "label": "FACTURA", "shape": "dot", "size": 24, "title": "Columna 2"}, {"color": "red", "id": "Regla_ambulatorio", "label": "Regla_ambulatorio", "shape": "dot", "size": 27, "title": "tipologia C1, filtrar por PlanCodigo los que comiencen por PGP y \nvalidacion es 1 m\u00e1ximo 1 al d\u00eda FechaServicio para el mismo paciente PacienteNit\ntipologia C4, filtrar por AMBITO igua a Consulta Externa, validacion es 1 para todos excepto para ServicioCodigo con valor 890502, si FACTURA contiene el servicio 132P01 entonces queda en 0 la validaci\u00f3n de los servicios 890285, 890385, 890384, 890284, 890502\nya que para ellos validacion es igual a Cantidad\ntipologia C7, validacion es igual al valor de Cantidad\ntipologia C8, filtrar por AMBITO igua a Consulta Externa, validacion es igual al valor de Cantidad"}, {"color": "aqua", "id": "produccion_FECHA_FACT", "label": "FECHA_FACT", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "capital_sendas_FECHA_FACT", "label": "FECHA_FACT", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "produccion_TIPO_FACTURA", "label": "TIPO_FACTURA", "shape": "dot", "size": 3, "title": "Columna 5"}, {"color": "aqua", "id": "produccion_INGRESO", "label": "INGRESO", "shape": "dot", "size": 6, "title": "Columna 6"}, {"color": "aqua", "id": "capital_sendas_INGRESO", "label": "INGRESO", "shape": "dot", "size": 9, "title": "Columna 4"}, {"color": "aqua", "id": "produccion_FEC_INGRESO", "label": "FEC_INGRESO", "shape": "dot", "size": 3, "title": "Columna 7"}, {"color": "aqua", "id": "produccion_COD_USU_FACTURADOR", "label": "COD_USU_FACTURADOR", "shape": "dot", "size": 3, "title": "Columna 8"}, {"color": "aqua", "id": "produccion_NOM_FACTURADOR", "label": "NOM_FACTURADOR", "shape": "dot", "size": 3, "title": "Columna 9"}, {"color": "aqua", "id": "produccion_DOC_PACIENTE", "label": "DOC_PACIENTE", "shape": "dot", "size": 12, "title": "Columna 10"}, {"color": "lime", "id": "Condicion_igual_documento", "label": "Condicion_igual_documento", "shape": "dot", "size": 9, "title": "PacienteNit es igual a documento entre capital_sendas y bases_norte"}, {"color": "red", "id": "Regla_urgencias_medicas", "label": "Regla_urgencias_medicas", "shape": "dot", "size": 18, "title": "tipologia C5, solo un registro por INGRESO,\npara cada grupo DOC_PACIENTE, DX_PRINCIPAL_1 validaci\u00f3n es 1, excepto cuando hay otro registro en menos de 72 horas de FEC_SERVICIO en el cual validaci\u00f3n es 0"}, {"color": "aqua", "id": "produccion_PACTIPDOC", "label": "PACTIPDOC", "shape": "dot", "size": 3, "title": "Columna 11"}, {"color": "aqua", "id": "produccion_TIPO_DOC", "label": "TIPO_DOC", "shape": "dot", "size": 3, "title": "Columna 12"}, {"color": "aqua", "id": "produccion_ESTADO_PAC", "label": "ESTADO_PAC", "shape": "dot", "size": 3, "title": "Columna 13"}, {"color": "aqua", "id": "produccion_NOMBRE_PACIENTE", "label": "NOMBRE_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 14"}, {"color": "aqua", "id": "produccion_COD_PACIENTE", "label": "COD_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 15"}, {"color": "aqua", "id": "produccion_FEC_NACIMIENTO", "label": "FEC_NACIMIENTO", "shape": "dot", "size": 9, "title": "Columna 16"}, {"color": "pink", "id": "Calculo_EDAD_1", "label": "Calculo_EDAD_1", "shape": "dot", "size": 9, "title": "(FEC_SERVICIO - FECHA_NACIMIENTO).apply(lambda x:\n x.days // 365 if x.days \u003e= 365 else (x.days // 30 if x.days \u003e= 30 else x.days))"}, {"color": "pink", "id": "Calculo_EDAD_2", "label": "Calculo_EDAD_2", "shape": "dot", "size": 9, "title": "(FEC_SERVICIO - FECHA_NACIMIENTO).apply(lambda x:\n A\u00f1os if x.days \u003e= 365 else (Meses if x.days \u003e= 30 else D\u00edas))"}, {"color": "aqua", "id": "produccion_GENERO", "label": "GENERO", "shape": "dot", "size": 9, "title": "Columna 17"}, {"color": "aqua", "id": "capital_sendas_GENERO", "label": "GENERO", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "pink", "id": "Calculo_TIPOLOGIA_NOMBRE", "label": "Calculo_TIPOLOGIA_NOMBRE", "shape": "dot", "size": 15, "title": "Revisar si hay una fila cuyo valor de TIPOLOGIA_NOMBRE contenga la palabra PEDIATRIA\n y si EDAD \u003c 14 entonces asignar ese valor de TIPOLOGIA_NOMBRE, \n si no entonces revisar si hay una fila cuyo valor de TIPOLOGIA_NOMBRE contenga la palabra GINECOLOGIA\n y si GENERO = F entonces asignar ese valor de TIPOLOGIA_NOMBRE,\n si no entonces identifica la primera fila cuyo valor de TIPOLOGIA_NOMBRE no contenga las palabras PEDIATRIA o GINECOLOGIA\n y asignar ese valor de TIPOLOGIA_NOMBRE de lo contrario asignar \"\""}, {"color": "aqua", "id": "produccion_EDAD", "label": "EDAD", "shape": "dot", "size": 6, "title": "Columna 18"}, {"color": "aqua", "id": "produccion_ESTRATO", "label": "ESTRATO", "shape": "dot", "size": 3, "title": "Columna 19"}, {"color": "aqua", "id": "produccion_NOM_ESTRATO", "label": "NOM_ESTRATO", "shape": "dot", "size": 3, "title": "Columna 20"}, {"color": "aqua", "id": "produccion_VALOR_ENTIDAD", "label": "VALOR_ENTIDAD", "shape": "dot", "size": 3, "title": "Columna 21"}, {"color": "aqua", "id": "produccion_VALOR_PACIENTE", "label": "VALOR_PACIENTE", "shape": "dot", "size": 3, "title": "Columna 22"}, {"color": "aqua", "id": "produccion_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 12, "title": "Columna 23"}, {"color": "aqua", "id": "capital_sendas_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 18, "title": "Columna 6"}, {"color": "lime", "id": "Condicion_igual_cups", "label": "Condicion_igual_cups", "shape": "dot", "size": 9, "title": "SERVICIO es igual a CUPS entre capital_sendas y Anexos"}, {"color": "aqua", "id": "produccion_CUMS", "label": "CUMS", "shape": "dot", "size": 3, "title": "Columna 24"}, {"color": "aqua", "id": "produccion_PRODUCTO", "label": "PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 25"}, {"color": "aqua", "id": "produccion_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna 26"}, {"color": "aqua", "id": "capital_sendas_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 6, "title": "Columna 7"}, {"color": "aqua", "id": "produccion_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 15, "title": "Columna 27"}, {"color": "aqua", "id": "capital_sendas_FEC_SERVICIO", "label": "FEC_SERVICIO", "shape": "dot", "size": 12, "title": "Columna 8"}, {"color": "aqua", "id": "produccion_CANT_SERVICIO", "label": "CANT_SERVICIO", "shape": "dot", "size": 9, "title": "Columna 28"}, {"color": "aqua", "id": "capital_sendas_CANT_SERVICIO", "label": "CANT_SERVICIO", "shape": "dot", "size": 9, "title": "Columna 9"}, {"color": "aqua", "id": "produccion_VALOR_UNITARIO", "label": "VALOR_UNITARIO", "shape": "dot", "size": 3, "title": "Columna 29"}, {"color": "aqua", "id": "produccion_VALOR_TOTAL", "label": "VALOR_TOTAL", "shape": "dot", "size": 6, "title": "Columna 30"}, {"color": "red", "id": "Regla_quirofano", "label": "Regla_quirofano", "shape": "dot", "size": 15, "title": "tipologia comienza por Qx (grupo quir\u00fargico),\nPor cada grupo de FACTURA, FEC_SERVICIO,\nvalidar que VALOR_TOTAL \u003e 0,\ncobrar m\u00e1ximo 3 registros de cada grupo,\ncobrar m\u00e1ximo 2 del mayor grupo quir\u00fargico y 1 del siguiente mayor grupo quir\u00fargico,\nsi solo hay 3 registros del mismo grupo quir\u00fargico, solo cobrar 2"}, {"color": "aqua", "id": "produccion_COD_PLAN", "label": "COD_PLAN", "shape": "dot", "size": 9, "title": "Columna 31"}, {"color": "aqua", "id": "capital_sendas_COD_PLAN", "label": "COD_PLAN", "shape": "dot", "size": 6, "title": "Columna 10"}, {"color": "aqua", "id": "produccion_NOM_PLAN", "label": "NOM_PLAN", "shape": "dot", "size": 6, "title": "Columna 32"}, {"color": "aqua", "id": "capital_sendas_NOM_PLAN", "label": "NOM_PLAN", "shape": "dot", "size": 9, "title": "Columna 11"}, {"color": "aqua", "id": "produccion_COD_MEDICO", "label": "COD_MEDICO", "shape": "dot", "size": 3, "title": "Columna 33"}, {"color": "aqua", "id": "produccion_NOM_MEDICO", "label": "NOM_MEDICO", "shape": "dot", "size": 3, "title": "Columna 34"}, {"color": "aqua", "id": "produccion_CENTRO_DE_COSTO", "label": "CENTRO_DE_COSTO", "shape": "dot", "size": 3, "title": "Columna 35"}, {"color": "aqua", "id": "produccion_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 3, "title": "Columna 36"}, {"color": "aqua", "id": "produccion_SIPCODCUP", "label": "SIPCODCUP", "shape": "dot", "size": 3, "title": "Columna 37"}, {"color": "aqua", "id": "produccion_COD_ENTIDAD1", "label": "COD_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 38"}, {"color": "aqua", "id": "capital_sendas_COD_ENTIDAD1", "label": "COD_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 12"}, {"color": "aqua", "id": "produccion_NOM_ENTIDAD1", "label": "NOM_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 39"}, {"color": "aqua", "id": "capital_sendas_NOM_ENTIDAD1", "label": "NOM_ENTIDAD1", "shape": "dot", "size": 6, "title": "Columna 13"}, {"color": "aqua", "id": "produccion_NUM_EGRESO", "label": "NUM_EGRESO", "shape": "dot", "size": 3, "title": "Columna 40"}, {"color": "aqua", "id": "produccion_CODIGO_CUMS", "label": "CODIGO_CUMS", "shape": "dot", "size": 3, "title": "Columna 41"}, {"color": "aqua", "id": "produccion_GMETIPMED", "label": "GMETIPMED", "shape": "dot", "size": 3, "title": "Columna 42"}, {"color": "aqua", "id": "produccion_SFATIPDOC", "label": "SFATIPDOC", "shape": "dot", "size": 3, "title": "Columna 43"}, {"color": "aqua", "id": "produccion_PRODUCTO_SERVICIO", "label": "PRODUCTO_SERVICIO", "shape": "dot", "size": 3, "title": "Columna 44"}, {"color": "aqua", "id": "produccion_AMBITO", "label": "AMBITO", "shape": "dot", "size": 9, "title": "Columna 45"}, {"color": "aqua", "id": "capital_sendas_AMBITO", "label": "AMBITO", "shape": "dot", "size": 6, "title": "Columna 14"}, {"color": "aqua", "id": "produccion_DX_PRINCIPAL_0", "label": "DX_PRINCIPAL_0", "shape": "dot", "size": 6, "title": "Columna 46"}, {"color": "aqua", "id": "capital_sendas_DX_PRINCIPAL_0", "label": "DX_PRINCIPAL_0", "shape": "dot", "size": 6, "title": "Columna 15"}, {"color": "aqua", "id": "produccion_DX_PRINCIPAL_1", "label": "DX_PRINCIPAL_1", "shape": "dot", "size": 6, "title": "Columna 47"}, {"color": "aqua", "id": "capital_sendas_DX_PRINCIPAL_1", "label": "DX_PRINCIPAL_1", "shape": "dot", "size": 9, "title": "Columna 16"}, {"color": "yellow", "id": "capital_sendas", "label": "capital_sendas", "shape": "dot", "size": 30, "title": "Reporte resultante del procesamiento"}, {"color": "red", "id": "Regla_egreso", "label": "Regla_egreso", "shape": "dot", "size": 12, "title": "tipologia H1 a H5, por cada grupo de FACTURA, SERVICIO y NOM_CENTROCOS, cobrar solo 1 de cada grupo\ntipologia H* diferente de H1 a H5, por cada grupo de FACTURA y SERVICIO, cobrar solo 1 de cada grupo"}, {"color": "red", "id": "Regla_hospital_dia", "label": "Regla_hospital_dia", "shape": "dot", "size": 9, "title": "tipologia HD, validaci\u00f3n es 1 por cada registro"}, {"color": "red", "id": "Regla_atencion_renal_integral", "label": "Regla_atencion_renal_integral", "shape": "dot", "size": 9, "title": "tipologia ARI, validaci\u00f3n es 1 por cada registro"}, {"color": "red", "id": "Regla_quirofano_basico_parto_y_cesarea", "label": "Regla_quirofano_basico_parto_y_cesarea", "shape": "dot", "size": 12, "title": "tipologia Qx1, validaci\u00f3n es 1 por cada grupo FACTURA/SERVICIO"}, {"color": "red", "id": "Regla_resonancia_nuclear_magnetica", "label": "Regla_resonancia_nuclear_magnetica", "shape": "dot", "size": 12, "title": "tipologia RM, validaci\u00f3n es igual a CANT_SERVICIO"}, {"color": "lime", "id": "Condicion_igual_servicio", "label": "Condicion_igual_servicio", "shape": "dot", "size": 12, "title": "SERVICIO es igual entre capital_sendas y Codigos_consulta"}, {"color": "lime", "id": "Condicion_igual_servicio_2", "label": "Condicion_igual_servicio_2", "shape": "dot", "size": 12, "title": "SERVICIO es igual entre capital_sendas y Codigo_tipologia"}, {"color": "aqua", "id": "capital_sendas_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 9, "title": "Columna 17"}, {"color": "aqua", "id": "capital_sendas_GRUPO_QX", "label": "GRUPO_QX", "shape": "dot", "size": 9, "title": "Columna 18"}, {"color": "aqua", "id": "capital_sendas_EDAD_1", "label": "EDAD_1", "shape": "dot", "size": 6, "title": "Columna 19"}, {"color": "aqua", "id": "capital_sendas_EDAD_2", "label": "EDAD_2", "shape": "dot", "size": 6, "title": "Columna 20"}, {"color": "aqua", "id": "capital_sendas_tipologia", "label": "tipologia", "shape": "dot", "size": 30, "title": "Columna 21"}, {"color": "aqua", "id": "capital_sendas_TIPOLOGIA_NOMBRE", "label": "TIPOLOGIA_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 23"}, {"color": "aqua", "id": "capital_sendas_ips", "label": "ips", "shape": "dot", "size": 9, "title": "Columna 24"}, {"color": "aqua", "id": "capital_sendas_validacion", "label": "validacion", "shape": "dot", "size": 27, "title": "Columna 25"}, {"color": "aqua", "id": "Codigos_consulta_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Codigos_consulta", "label": "Codigos_consulta", "shape": "dot", "size": 12, "title": "Archivo externo C\u00f3digos consultas"}, {"color": "aqua", "id": "Codigos_consulta_CONCEPTO", "label": "CONCEPTO", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 3"}, {"color": "aqua", "id": "Codigos_consulta_GRUPO_QX", "label": "GRUPO_QX", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Anexos_CUPS", "label": "CUPS", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Anexos", "label": "Anexos", "shape": "dot", "size": 18, "title": "Archivo externo Anexos Capital Salud unificados 2023"}, {"color": "aqua", "id": "Anexos_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 3, "title": "Columna 2"}, {"color": "aqua", "id": "Anexos_OBSERVACIONES", "label": "OBSERVACIONES", "shape": "dot", "size": 3, "title": "Columna 3"}, {"color": "aqua", "id": "Anexos_TIPOLOGIA_NOMBRE", "label": "TIPOLOGIA_NOMBRE", "shape": "dot", "size": 6, "title": "Columna 4"}, {"color": "aqua", "id": "Anexos_CODIGOS_ANEXOS", "label": "CODIGOS_ANEXOS", "shape": "dot", "size": 3, "title": "Columna 5"}, {"color": "aqua", "id": "Anexos_TARIFA_CONTRATADA", "label": "TARIFA_CONTRATADA", "shape": "dot", "size": 3, "title": "Columna 6"}, {"color": "aqua", "id": "Codigo_tipologia_SERVICIO", "label": "SERVICIO", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "Codigo_tipologia", "label": "Codigo_tipologia", "shape": "dot", "size": 15, "title": "Archivo externo Codigo tipologia"}, {"color": "aqua", "id": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "label": "NOM_SERVICIO_PRODUCTO", "shape": "dot", "size": 3, "title": "Columna 2"}, {"color": "aqua", "id": "Codigo_tipologia_tipologia", "label": "tipologia", "shape": "dot", "size": 6, "title": "Columna 3"}, {"color": "aqua", "id": "Codigo_tipologia_nombre_tipologia", "label": "nombre_tipologia", "shape": "dot", "size": 3, "title": "Columna 4"}, {"color": "lime", "id": "Condicion_contiene_PGP", "label": "Condicion_contiene_PGP", "shape": "dot", "size": 3, "title": "NOM_PLAN contiene el texto PGP"}, {"color": "aqua", "id": "capital_sendas_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 12, "title": "Columna 22"}, {"color": "aqua", "id": "bases_norte_documento", "label": "documento", "shape": "dot", "size": 6, "title": "Columna 1"}, {"color": "yellow", "id": "bases_norte", "label": "bases_norte", "shape": "dot", "size": 6, "title": "Archivo externo bases norte"}, {"color": "aqua", "id": "bases_norte_ips", "label": "ips", "shape": "dot", "size": 6, "title": "Columna 2"}, {"color": "aqua", "id": "Codigo_tipologia_NOM_CENTROCOS", "label": "NOM_CENTROCOS", "shape": "dot", "size": 6, "title": "Columna 5"}, {"color": "gray", "id": "(_110 {})", "label": "(_110 {})", "shape": "dot", "size": 3, "title": ""}, {"color": "gray", "id": "(_111 {})", "label": "(_111 {})", "shape": "dot", "size": 3, "title": ""}, {"color": "gray", "id": "(_112 {})", "label": "(_112 {})", "shape": "dot", "size": 3, "title": ""}]);
-                  edges = new vis.DataSet([{"arrows": "to", "from": "produccion_SEDE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SEDE_NOMBRE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SEDE_NOMBRE", "title": "COPIADO_A", "to": "capital_sendas_SEDE_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_SEDE_NOMBRE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "COPIADO_A", "to": "capital_sendas_FACTURA"}, {"arrows": "to", "from": "produccion_FACTURA", "title": "CALCULA_A", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_egreso"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_hospital_dia"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_atencion_renal_integral"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "capital_sendas_FACTURA", "title": "AGRUPADO", "to": "Regla_resonancia_nuclear_magnetica"}, {"arrows": "to", "from": "Regla_ambulatorio", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "produccion_FECHA_FACT", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FECHA_FACT", "title": "COPIADO_A", "to": "capital_sendas_FECHA_FACT"}, {"arrows": "to", "from": "capital_sendas_FECHA_FACT", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_TIPO_FACTURA", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_INGRESO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_INGRESO", "title": "COPIADO_A", "to": "capital_sendas_INGRESO"}, {"arrows": "to", "from": "capital_sendas_INGRESO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_INGRESO", "title": "CALCULA_A", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "produccion_FEC_INGRESO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_USU_FACTURADOR", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_FACTURADOR", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "AGRUPADO", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "produccion_DOC_PACIENTE", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "Condicion_igual_documento", "title": "CUMPLE", "to": "capital_sendas_ips"}, {"arrows": "to", "from": "Regla_urgencias_medicas", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "produccion_PACTIPDOC", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_TIPO_DOC", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_ESTADO_PAC", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOMBRE_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FEC_NACIMIENTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FEC_NACIMIENTO", "title": "CALCULA_A", "to": "Calculo_EDAD_1"}, {"arrows": "to", "from": "produccion_FEC_NACIMIENTO", "title": "CALCULA_A", "to": "Calculo_EDAD_2"}, {"arrows": "to", "from": "Calculo_EDAD_1", "title": "CALCULA_A", "to": "capital_sendas_EDAD_1"}, {"arrows": "to", "from": "Calculo_EDAD_2", "title": "CALCULA_A", "to": "capital_sendas_EDAD_2"}, {"arrows": "to", "from": "produccion_GENERO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_GENERO", "title": "COPIADO_A", "to": "capital_sendas_GENERO"}, {"arrows": "to", "from": "produccion_GENERO", "title": "CALCULA_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "capital_sendas_GENERO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Calculo_TIPOLOGIA_NOMBRE", "title": "CALCULA_A", "to": "capital_sendas_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "produccion_EDAD", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_EDAD", "title": "CALCULA_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "produccion_ESTRATO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_ESTRATO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_VALOR_ENTIDAD", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_VALOR_PACIENTE", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_SERVICIO"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "produccion_SERVICIO", "title": "CALCULA_A", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "AGRUPADO", "to": "Regla_egreso"}, {"arrows": "to", "from": "capital_sendas_SERVICIO", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "Condicion_igual_cups", "title": "CUMPLE", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "produccion_CUMS", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_PRODUCTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_SERVICIO_PRODUCTO", "title": "COPIADO_A", "to": "capital_sendas_NOM_SERVICIO_PRODUCTO"}, {"arrows": "to", "from": "capital_sendas_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_FEC_SERVICIO"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "CALCULA_A", "to": "Calculo_EDAD_1"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "CALCULA_A", "to": "Calculo_EDAD_2"}, {"arrows": "to", "from": "produccion_FEC_SERVICIO", "title": "AGRUPADO", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "CALCULA_A", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_FEC_SERVICIO", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "produccion_CANT_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_CANT_SERVICIO", "title": "COPIADO_A", "to": "capital_sendas_CANT_SERVICIO"}, {"arrows": "to", "from": "produccion_CANT_SERVICIO", "title": "CALCULA_A", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_CANT_SERVICIO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_CANT_SERVICIO", "title": "CALCULA_A", "to": "Regla_resonancia_nuclear_magnetica"}, {"arrows": "to", "from": "produccion_VALOR_UNITARIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_VALOR_TOTAL", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_VALOR_TOTAL", "title": "CALCULA_A", "to": "Regla_quirofano"}, {"arrows": "to", "from": "Regla_quirofano", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "produccion_COD_PLAN", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_PLAN", "title": "COPIADO_A", "to": "capital_sendas_COD_PLAN"}, {"arrows": "to", "from": "produccion_COD_PLAN", "title": "CALCULA_A", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_COD_PLAN", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_PLAN", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_PLAN", "title": "COPIADO_A", "to": "capital_sendas_NOM_PLAN"}, {"arrows": "to", "from": "capital_sendas_NOM_PLAN", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_COD_MEDICO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_MEDICO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_CENTRO_DE_COSTO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SIPCODCUP", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_ENTIDAD1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_COD_ENTIDAD1", "title": "COPIADO_A", "to": "capital_sendas_COD_ENTIDAD1"}, {"arrows": "to", "from": "capital_sendas_COD_ENTIDAD1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NOM_ENTIDAD1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_NOM_ENTIDAD1", "title": "COPIADO_A", "to": "capital_sendas_NOM_ENTIDAD1"}, {"arrows": "to", "from": "capital_sendas_NOM_ENTIDAD1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_NUM_EGRESO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_CODIGO_CUMS", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_GMETIPMED", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_SFATIPDOC", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_PRODUCTO_SERVICIO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_AMBITO", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_AMBITO", "title": "COPIADO_A", "to": "capital_sendas_AMBITO"}, {"arrows": "to", "from": "produccion_AMBITO", "title": "CALCULA_A", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_AMBITO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL_0", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL_0", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL_0"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL_0", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL_1", "title": "CAMPO_DE", "to": "produccion"}, {"arrows": "to", "from": "produccion_DX_PRINCIPAL_1", "title": "COPIADO_A", "to": "capital_sendas_DX_PRINCIPAL_1"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL_1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_DX_PRINCIPAL_1", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "Regla_egreso", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Regla_hospital_dia", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Regla_atencion_renal_integral", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Regla_quirofano_basico_parto_y_cesarea", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Regla_resonancia_nuclear_magnetica", "title": "CALCULA_A", "to": "capital_sendas_validacion"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Condicion_igual_servicio", "title": "CUMPLE", "to": "capital_sendas_GRUPO_QX"}, {"arrows": "to", "from": "Condicion_igual_servicio_2", "title": "CUMPLE", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Condicion_igual_servicio_2", "title": "CUMPLE", "to": "capital_sendas_NOM_CENTROCOS"}, {"arrows": "to", "from": "capital_sendas_CONCEPTO", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_GRUPO_QX", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD_1", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_EDAD_2", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_quirofano"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_ambulatorio"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_hospital_dia"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_atencion_renal_integral"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_quirofano_basico_parto_y_cesarea"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_urgencias_medicas"}, {"arrows": "to", "from": "capital_sendas_tipologia", "title": "AGRUPADO", "to": "Regla_resonancia_nuclear_magnetica"}, {"arrows": "to", "from": "capital_sendas_TIPOLOGIA_NOMBRE", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_ips", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_validacion", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_CONCEPTO", "title": "COPIADO_A", "to": "capital_sendas_CONCEPTO"}, {"arrows": "to", "from": "Codigos_consulta_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO_QX", "title": "CAMPO_DE", "to": "Codigos_consulta"}, {"arrows": "to", "from": "Codigos_consulta_GRUPO_QX", "title": "COPIADO_A", "to": "capital_sendas_GRUPO_QX"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_CUPS", "title": "CUMPLE", "to": "Condicion_igual_cups"}, {"arrows": "to", "from": "Anexos_SERVICIO", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_OBSERVACIONES", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA_NOMBRE", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TIPOLOGIA_NOMBRE", "title": "COPIADO_A", "to": "Calculo_TIPOLOGIA_NOMBRE"}, {"arrows": "to", "from": "Anexos_CODIGOS_ANEXOS", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Anexos_TARIFA_CONTRATADA", "title": "CAMPO_DE", "to": "Anexos"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_SERVICIO", "title": "CUMPLE", "to": "Condicion_igual_servicio_2"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_SERVICIO_PRODUCTO", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_tipologia", "title": "COPIADO_A", "to": "capital_sendas_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_nombre_tipologia", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Condicion_contiene_PGP", "title": "CUMPLE", "to": "capital_sendas_NOM_PLAN"}, {"arrows": "to", "from": "capital_sendas_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "capital_sendas_NOM_CENTROCOS", "title": "AGRUPADO", "to": "Regla_egreso"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "bases_norte_documento", "title": "CUMPLE", "to": "Condicion_igual_documento"}, {"arrows": "to", "from": "bases_norte_ips", "title": "CAMPO_DE", "to": "bases_norte"}, {"arrows": "to", "from": "bases_norte_ips", "title": "COPIADO_A", "to": "capital_sendas_ips"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_CENTROCOS", "title": "CAMPO_DE", "to": "Codigo_tipologia"}, {"arrows": "to", "from": "Codigo_tipologia_NOM_CENTROCOS", "title": "COPIADO_A", "to": "capital_sendas_NOM_CENTROCOS"}, {"arrows": "to", "from": "(_110 {})", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "(_111 {})", "title": "CAMPO_DE", "to": "capital_sendas"}, {"arrows": "to", "from": "(_112 {})", "title": "CAMPO_DE", "to": "capital_sendas"}]);
-
-                  nodeColors = {};
-                  allNodes = nodes.get({ returnType: "Object" });
-                  for (nodeId in allNodes) {
-                    nodeColors[nodeId] = allNodes[nodeId].color;
-                  }
-                  allEdges = edges.get({ returnType: "Object" });
-                  // adding nodes and edges to the graph
-                  data = {nodes: nodes, edges: edges};
-
-                  var options = {"nodes": {"shape": "dot", "font": {"size": 12}}, "edges": {"arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, "interaction": {"hover": true, "zoomView": true}};
-
-                  
-
-
-                  
-
-                  network = new vis.Network(container, data, options);
-
-                  
-
-                  
-                    network.on("selectNode", neighbourhoodHighlight);
-                  
-
-                  
-
-
-                  
-                      network.on("stabilizationProgress", function(params) {
-                          document.getElementById('loadingBar').removeAttribute("style");
-                          var maxWidth = 496;
-                          var minWidth = 20;
-                          var widthFactor = params.iterations/params.total;
-                          var width = Math.max(minWidth,maxWidth * widthFactor);
-                          document.getElementById('bar').style.width = width + 'px';
-                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
-                      });
-                      network.once("stabilizationIterationsDone", function() {
-                          document.getElementById('text').innerHTML = '100%';
-                          document.getElementById('bar').style.width = '496px';
-                          document.getElementById('loadingBar').style.opacity = 0;
-                          // really clean the dom element
-                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
-                      });
-                  
-
-                  return network;
-
-              }
-              drawGraph();
-        </script>
-    </body>
+function buscarNodo() {
+  const texto = document.getElementById('buscar').value.trim().toLowerCase();
+  if (!texto) return;
+  const encontrado = allNodeIds.find(function (id) {
+    const n = nodes.get(id);
+    return (n.label || '').toLowerCase().includes(texto) || String(id).toLowerCase().includes(texto);
+  });
+  if (encontrado) {
+    network.selectNodes([encontrado]);
+    network.focus(encontrado, { scale: 1.2, animation: true });
+    network.emit('selectNode', { nodes: [encontrado] });
+  } else {
+    estado.textContent = 'No se encontro ningun nodo que coincida con "' + texto + '".';
+  }
+}
+</script>
+</body>
 </html>
